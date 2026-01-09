@@ -9,7 +9,7 @@ local Config = loadstring(game:HttpGet("https://github.com/LeonidZharenko/Secret
 local Aimbot = loadstring(game:HttpGet("https://github.com/LeonidZharenko/SecretProject/blob/main/modules/Aimbot.lua"))()
 Aimbot.Init(Config, Window:AddTab({Title = "Aimbot"}))
 
-local ESP = loadstring(game:HttpGet("ТВОЯ_RAW_ССЫЛКА_НА_modules/ESP.lua"))()
+local ESP = loadstring(game:HttpGet("https://github.com/LeonidZharenko/SecretProject/blob/main/modules/ESP.lua"))()
 ESP.Init(Config, Window:AddTab({Title = "Visual"}))
 
 Fluent:Notify({

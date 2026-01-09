@@ -6,7 +6,7 @@ return {
         smoothness = 0.12,
         wallCheck = true,
         fullTarget = false,
-        holdPkmMode = false,
+        holdPkmMode = false,  -- Hold Target
     },
     ESP = {
         BoxEnabled = true,

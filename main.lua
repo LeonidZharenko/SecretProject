@@ -6,7 +6,7 @@ local Window = Fluent:CreateWindow({
 
 local Config = loadstring(game:HttpGet("https://github.com/LeonidZharenko/SecretProject/blob/main/config.lua"))()
 
-local Aimbot = loadstring(game:HttpGet("ТВОЯ_RAW_ССЫЛКА_НА_modules/Aimbot.lua"))()
+local Aimbot = loadstring(game:HttpGet("https://github.com/LeonidZharenko/SecretProject/blob/main/modules/Aimbot.lua"))()
 Aimbot.Init(Config, Window:AddTab({Title = "Aimbot"}))
 
 local ESP = loadstring(game:HttpGet("ТВОЯ_RAW_ССЫЛКА_НА_modules/ESP.lua"))()

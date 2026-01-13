@@ -1,35 +1,29 @@
-local OrionLib = loadstring(game:HttpGet("https://pastebin.com/raw/4y6kX7kL"))()
+-- main.lua — точка входа (inject'ишь только этот файл)
 
-local Window = OrionLib:MakeWindow({
-    Name = "My Exploit | Aimbot + ESP",
-    HidePremium = false,
-    SaveConfig = true,
-    ConfigFolder = "MyExploit"
-})
+print("Загрузка модулей...")
 
-local AimbotTab = Window:MakeTab({
-    Name = "Aimbot",
-    Icon = "rbxassetid://4483345998",
-    PremiumOnly = false
-})
+-- Загрузка Aimbot
+local AimbotSuccess, Aimbot = pcall(function()
+    return loadstring(game:HttpGet("https://raw.githubusercontent.com/LeonidZharenko/SecretProject/main/modules/Aimbot.lua"))()
+end)
 
-local VisualTab = Window:MakeTab({
-    Name = "Visual",
-    Icon = "rbxassetid://4483345998",
-    PremiumOnly = false
-})
+if AimbotSuccess and Aimbot then
+    Aimbot.Init()  -- если Init принимает аргументы — добавь, сейчас без
+    print("Aimbot успешно загружен и инициализирован")
+else
+    warn("Ошибка загрузки Aimbot: " .. tostring(Aimbot))
+end
 
--- Загрузка твоих модулей (они уже работают, как показал тест)
-local Config = loadstring(game:HttpGet("https://raw.githubusercontent.com/LeonidZharenko/SecretProject/main/config.lua"))()
+-- Загрузка ESP
+local ESPSuccess, ESP = pcall(function()
+    return loadstring(game:HttpGet("https://raw.githubusercontent.com/LeonidZharenko/SecretProject/main/modules/ESP.lua"))()
+end)
 
-local Aimbot = loadstring(game:HttpGet("https://raw.githubusercontent.com/LeonidZharenko/SecretProject/main/modules/Aimbot.lua"))()
-Aimbot.Init(Config, AimbotTab)
+if ESPSuccess and ESP then
+    ESP.Init()  -- если Init принимает аргументы — добавь
+    print("ESP успешно загружен и инициализирован")
+else
+    warn("Ошибка загрузки ESP: " .. tostring(ESP))
+end
 
-local ESP = loadstring(game:HttpGet("https://raw.githubusercontent.com/LeonidZharenko/SecretProject/main/modules/ESP.lua"))()
-ESP.Init(Config, VisualTab)
-
-OrionLib:MakeNotification({
-    Name = "Success",
-    Content = "Exploit загружен! Нажми RightControl для скрытия окна",
-    Time = 5
-})
+print("Эксплойт запущен! Проверь работу Aimbot и ESP в игре.")

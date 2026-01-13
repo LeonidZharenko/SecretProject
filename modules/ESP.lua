@@ -1,5 +1,5 @@
 local ESP = {}
-
+ESP.Enabled = true
 function ESP.Init(config)
     ESP.Config = config.ESP
 

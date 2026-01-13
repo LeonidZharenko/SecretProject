@@ -1,11 +1,10 @@
 local Aimbot = {}
 
-function Aimbot.Init(config, tab)
+function Aimbot.Init(config, tab)  -- tab — это Orion Tab
     Aimbot.Config = config.Aimbot
     Aimbot.Enabled = false
     Aimbot.lockedTarget = nil
     Aimbot.isTargetHeld = false
-    Aimbot.waitingForBind = nil
 
     local Players = game:GetService("Players")
     local RunService = game:GetService("RunService")
@@ -30,9 +29,9 @@ function Aimbot.Init(config, tab)
     StatusLabel.Text = "Aimbot: OFF | Часть: Head | FullT: OFF"
     StatusLabel.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
-    -- Fluent UI в вкладке tab
+    -- UI в Orion (вкладка tab)
     tab:AddToggle({
-        Title = "Aimbot Enabled",
+        Name = "Aimbot Enabled",
         Default = false,
         Callback = function(value)
             Aimbot.Enabled = value
@@ -46,9 +45,10 @@ function Aimbot.Init(config, tab)
     })
 
     tab:AddSlider({
-        Title = "FOV Radius",
+        Name = "FOV Radius",
         Min = 50,
         Max = 600,
+        Increment = 1,
         Default = Aimbot.Config.fovRadius,
         Callback = function(value)
             Aimbot.Config.fovRadius = value
@@ -56,19 +56,19 @@ function Aimbot.Init(config, tab)
     })
 
     tab:AddSlider({
-        Title = "Smoothness",
+        Name = "Smoothness",
         Min = 0.05,
         Max = 1,
+        Increment = 0.01,
         Default = Aimbot.Config.smoothness,
-        Rounding = 2,
         Callback = function(value)
             Aimbot.Config.smoothness = value
         end
     })
 
     tab:AddDropdown({
-        Title = "Target Part",
-        Values = {"Head", "Torso", "Legs"},
+        Name = "Target Part",
+        Options = {"Head", "Torso", "Legs"},
         Default = Aimbot.Config.targetPart,
         Callback = function(value)
             Aimbot.Config.targetPart = value
@@ -77,7 +77,7 @@ function Aimbot.Init(config, tab)
     })
 
     tab:AddToggle({
-        Title = "Show FOV Circle",
+        Name = "Show FOV Circle",
         Default = false,
         Callback = function(value)
             Aimbot.Config.showFovCircle = value
@@ -85,7 +85,7 @@ function Aimbot.Init(config, tab)
     })
 
     tab:AddToggle({
-        Title = "Hold Target (RMB)",
+        Name = "Hold Target (RMB)",
         Default = false,
         Callback = function(value)
             Aimbot.Config.holdPkmMode = value
@@ -93,7 +93,7 @@ function Aimbot.Init(config, tab)
     })
 
     tab:AddToggle({
-        Title = "Wall Check",
+        Name = "Wall Check",
         Default = true,
         Callback = function(value)
             Aimbot.Config.wallCheck = value
@@ -101,7 +101,7 @@ function Aimbot.Init(config, tab)
     })
 
     tab:AddToggle({
-        Title = "Full Target (Lock)",
+        Name = "Full Target (Lock)",
         Default = false,
         Callback = function(value)
             Aimbot.Config.fullTarget = value
@@ -143,7 +143,7 @@ function Aimbot.Init(config, tab)
         return true
     end
 
-    -- Проверка, находится ли игрок в FOV
+    -- isInFov
     local function isInFov(player)
         if not player or not player.Character then return false end
         

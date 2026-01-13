@@ -1,6 +1,6 @@
 local Aimbot = {}
 
-Aimbot.Enabled = false  -- будет управляться из UI
+Aimbot.Enabled = true  -- будет управляться из UI
 Aimbot.lockedTarget = nil
 Aimbot.isTargetHeld = false
 

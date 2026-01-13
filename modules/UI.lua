@@ -1,5 +1,3 @@
--- modules/UI.lua — красивый UI в стиле Fluent (на Instance.new)
-
 local UI = {}
 
 function UI.Init(AimbotModule, ESPModule)
@@ -92,7 +90,7 @@ function UI.Init(AimbotModule, ESPModule)
     ContentFrame.BackgroundTransparency = 1
     ContentFrame.Parent = MainFrame
 
-    -- Вкладка Aimbot
+    -- Вкладка Aimbot (добавляем настройки)
     local AimbotContent = Instance.new("Frame")
     AimbotContent.Size = UDim2.new(1, 0, 1, 0)
     AimbotContent.BackgroundTransparency = 1
@@ -119,6 +117,8 @@ function UI.Init(AimbotModule, ESPModule)
         AimbotToggle.BackgroundColor3 = AimbotModule.Enabled and Color3.fromRGB(0, 170, 0) or Color3.fromRGB(170, 0, 0)
     end)
 
+    -- Добавь сюда другие настройки Aimbot (FOV, Smoothness и т.д.) по аналогии
+
     -- Вкладка ESP
     local ESPContent = Instance.new("Frame")
     ESPContent.Size = UDim2.new(1, 0, 1, 0)
@@ -141,8 +141,9 @@ function UI.Init(AimbotModule, ESPModule)
     ESPToggleCorner.Parent = ESPToggle
 
     ESPToggle.MouseButton1Click:Connect(function()
-        -- Добавь логику включения/выключения ESP
-        ESPToggle.Text = "ESP: " .. (true and "ON" or "OFF")  -- пока всегда ON
+        -- Если в ESP есть Enabled — используй
+        -- ESPModule.Enabled = not ESPModule.Enabled
+        ESPToggle.Text = "ESP: ON"  -- пока всегда ON, добавь логику
     end)
 
     -- Переключение вкладок

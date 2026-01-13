@@ -1,180 +1,190 @@
--- main.lua — полный рабочий вариант с красивым UI
+-- Universal Aimbot & ESP with Fluent UI (твой функционал)
 
-print("Загрузка модулей...")
+local Library = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
+local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua"))()
+local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
 
+local Window = Library:CreateWindow({
+    Title = "My Exploit | Aimbot + ESP",
+    SubTitle = "by Steam",
+    TabWidth = 160,
+    Size = UDim2.fromOffset(580, 460),
+    Acrylic = false,
+    Theme = "Darker",
+    AccentColor = Color3.fromRGB(255, 165, 0),
+    MinimizeKey = Enum.KeyCode.LeftControl
+})
+
+-- Вкладки
+local Tabs = {
+    Main = Window:AddTab({ Title = "Welcome!", Icon = "home" }),
+    Aimbot = Window:AddTab({ Title = "Aimbot", Icon = "crosshair" }),
+    ESP = Window:AddTab({ Title = "ESP", Icon = "eye" }),
+    Settings = Window:AddTab({ Title = "Settings", Icon = "settings" }),
+}
+
+-- Приветствие
+local playerName = game.Players.LocalPlayer.Name
+Tabs.Main:AddParagraph({
+    Title = "Добро пожаловать, " .. playerName .. "!",
+    Content = "Это твой универсальный Aimbot + ESP. Настройки сохраняются автоматически."
+})
+
+-- Загрузка модулей (твои Aimbot и ESP)
 local Aimbot = loadstring(game:HttpGet("https://raw.githubusercontent.com/LeonidZharenko/SecretProject/main/modules/Aimbot.lua"))()
-print("Aimbot загружен")
-
 local ESP = loadstring(game:HttpGet("https://raw.githubusercontent.com/LeonidZharenko/SecretProject/main/modules/ESP.lua"))()
-print("ESP загружен")
 
--- Запуск модулей
+-- Инициализация
 Aimbot.Init()
 ESP.Init()
 
--- Красивый UI
-local Players = game:GetService("Players")
-local UserInputService = game:GetService("UserInputService")
-local TweenService = game:GetService("TweenService")
-local LocalPlayer = Players.LocalPlayer
-
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "FluentLikeGUI"
-ScreenGui.ResetOnSpawn = false
-ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
-
-local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 500, 0, 350)
-MainFrame.Position = UDim2.new(0.5, -250, 0.5, -175)
-MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
-MainFrame.BorderSizePixel = 0
-MainFrame.Visible = true
-MainFrame.Parent = ScreenGui
-
-local UICorner = Instance.new("UICorner")
-UICorner.CornerRadius = UDim.new(0, 16)
-UICorner.Parent = MainFrame
-
-local UIGradient = Instance.new("UIGradient")
-UIGradient.Color = ColorSequence.new{
-    ColorSequenceKeypoint.new(0, Color3.fromRGB(30, 30, 40)),
-    ColorSequenceKeypoint.new(1, Color3.fromRGB(15, 15, 20))
-}
-UIGradient.Rotation = 90
-UIGradient.Parent = MainFrame
-
-local UIStroke = Instance.new("UIStroke")
-UIStroke.Color = Color3.fromRGB(60, 60, 80)
-UIStroke.Thickness = 2
-UIStroke.Transparency = 0.5
-UIStroke.Parent = MainFrame
-
--- Заголовок
-local Title = Instance.new("TextLabel")
-Title.Size = UDim2.new(1, 0, 0, 50)
-Title.BackgroundTransparency = 1
-Title.Text = "My Exploit"
-Title.TextColor3 = Color3.fromRGB(200, 200, 255)
-Title.Font = Enum.Font.GothamBlack
-Title.TextSize = 28
-Title.TextStrokeTransparency = 0.8
-Title.Parent = MainFrame
-
--- Вкладки
-local TabFrame = Instance.new("Frame")
-TabFrame.Size = UDim2.new(1, 0, 0, 50)
-TabFrame.Position = UDim2.new(0, 0, 0, 50)
-TabFrame.BackgroundTransparency = 1
-TabFrame.Parent = MainFrame
-
-local AimbotTabBtn = Instance.new("TextButton")
-AimbotTabBtn.Size = UDim2.new(0.5, 0, 1, 0)
-AimbotTabBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
-AimbotTabBtn.Text = "Aimbot"
-AimbotTabBtn.TextColor3 = Color3.new(1,1,1)
-AimbotTabBtn.Font = Enum.Font.GothamBold
-AimbotTabBtn.TextSize = 20
-AimbotTabBtn.Parent = TabFrame
-
-local AimbotCorner = Instance.new("UICorner")
-AimbotCorner.CornerRadius = UDim.new(0, 12)
-AimbotCorner.Parent = AimbotTabBtn
-
-local ESPTabBtn = Instance.new("TextButton")
-ESPTabBtn.Size = UDim2.new(0.5, 0, 1, 0)
-ESPTabBtn.Position = UDim2.new(0.5, 0, 0, 0)
-ESPTabBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
-ESPTabBtn.Text = "ESP"
-ESPTabBtn.TextColor3 = Color3.new(1,1,1)
-ESPTabBtn.Font = Enum.Font.GothamBold
-ESPTabBtn.TextSize = 20
-ESPTabBtn.Parent = TabFrame
-
-local ESPTabCorner = Instance.new("UICorner")
-ESPTabCorner.CornerRadius = UDim.new(0, 12)
-ESPTabCorner.Parent = ESPTabBtn
-
--- Контент
-local ContentFrame = Instance.new("Frame")
-ContentFrame.Size = UDim2.new(1, 0, 1, -100)
-ContentFrame.Position = UDim2.new(0, 0, 0, 100)
-ContentFrame.BackgroundTransparency = 1
-ContentFrame.Parent = MainFrame
-
--- Вкладка Aimbot
-local AimbotContent = Instance.new("Frame")
-AimbotContent.Size = UDim2.new(1, 0, 1, 0)
-AimbotContent.BackgroundTransparency = 1
-AimbotContent.Visible = true
-AimbotContent.Parent = ContentFrame
-
-local AimbotToggle = Instance.new("TextButton")
-AimbotToggle.Size = UDim2.new(0.8, 0, 0, 50)
-AimbotToggle.Position = UDim2.new(0.1, 0, 0.1, 0)
-AimbotToggle.BackgroundColor3 = Aimbot.Enabled and Color3.fromRGB(0, 170, 0) or Color3.fromRGB(170, 0, 0)
-AimbotToggle.Text = "Aimbot: " .. (Aimbot.Enabled and "ON" or "OFF")
-AimbotToggle.TextColor3 = Color3.new(1,1,1)
-AimbotToggle.Font = Enum.Font.GothamBold
-AimbotToggle.TextSize = 24
-AimbotToggle.Parent = AimbotContent
-
-local AimbotToggleCorner = Instance.new("UICorner")
-AimbotToggleCorner.CornerRadius = UDim.new(0, 12)
-AimbotToggleCorner.Parent = AimbotToggle
-
-AimbotToggle.MouseButton1Click:Connect(function()
-    Aimbot.Enabled = not Aimbot.Enabled
-    AimbotToggle.Text = "Aimbot: " .. (Aimbot.Enabled and "ON" or "OFF")
-    AimbotToggle.BackgroundColor3 = Aimbot.Enabled and Color3.fromRGB(0, 170, 0) or Color3.fromRGB(170, 0, 0)
-end)
-
--- Вкладка ESP (добавь больше настроек по желанию)
-local ESPContent = Instance.new("Frame")
-ESPContent.Size = UDim2.new(1, 0, 1, 0)
-ESPContent.BackgroundTransparency = 1
-ESPContent.Visible = false
-ESPContent.Parent = ContentFrame
-
-local ESPToggle = Instance.new("TextButton")
-ESPToggle.Size = UDim2.new(0.8, 0, 0, 50)
-ESPToggle.Position = UDim2.new(0.1, 0, 0.1, 0)
-ESPToggle.BackgroundColor3 = Color3.fromRGB(0, 170, 0)
-ESPToggle.Text = "ESP: ON"  -- пока всегда ON, добавь переменную Enabled в ESP.lua
-ESPToggle.TextColor3 = Color3.new(1,1,1)
-ESPToggle.Font = Enum.Font.GothamBold
-ESPToggle.TextSize = 24
-ESPToggle.Parent = ESPContent
-
-local ESPToggleCorner = Instance.new("UICorner")
-ESPToggleCorner.CornerRadius = UDim.new(0, 12)
-ESPToggleCorner.Parent = ESPToggle
-
-ESPToggle.MouseButton1Click:Connect(function()
-    -- Добавь в ESP.lua переменную ESP.Enabled = true/false
-    -- ESP.Enabled = not ESP.Enabled
-    ESPToggle.Text = "ESP: ON"  -- временно, добавь логику
-end)
-
--- Переключение вкладок
-AimbotTabBtn.MouseButton1Click:Connect(function()
-    AimbotContent.Visible = true
-    ESPContent.Visible = false
-    AimbotTabBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
-    ESPTabBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
-end)
-
-ESPTabBtn.MouseButton1Click:Connect(function()
-    AimbotContent.Visible = false
-    ESPContent.Visible = true
-    ESPTabBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
-    AimbotTabBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
-end)
-
--- Скрытие/показ по INSERT
-UserInputService.InputBegan:Connect(function(input)
-    if input.KeyCode == Enum.KeyCode.Insert then
-        MainFrame.Visible = not MainFrame.Visible
+-- Aimbot настройки в UI
+Tabs.Aimbot:AddToggle("AimbotEnabled", {
+    Title = "Aimbot Enabled",
+    Description = "Вкл/выкл аимбот",
+    Default = false,
+    Callback = function(value)
+        Aimbot.Enabled = value
+        -- Обнови status label если есть
     end
-end)
+})
 
-print("Exploit запущен! INSERT — скрыть/показать GUI")
+Tabs.Aimbot:AddSlider("FOVRadius", {
+    Title = "FOV Radius",
+    Description = "Радиус поля зрения",
+    Min = 50,
+    Max = 600,
+    Default = 150,
+    Rounding = 0,
+    Callback = function(value)
+        Aimbot.Config.fovRadius = value
+    end
+})
+
+Tabs.Aimbot:AddSlider("Smoothness", {
+    Title = "Smoothness",
+    Description = "Плавность аима",
+    Min = 0.05,
+    Max = 1,
+    Default = 0.12,
+    Rounding = 2,
+    Callback = function(value)
+        Aimbot.Config.smoothness = value
+    end
+})
+
+Tabs.Aimbot:AddDropdown("TargetPart", {
+    Title = "Target Part",
+    Description = "Цель аима",
+    Values = {"Head", "Torso", "Legs"},
+    Default = 1,
+    Callback = function(value)
+        Aimbot.Config.targetPart = value
+    end
+})
+
+Tabs.Aimbot:AddToggle("ShowFOV", {
+    Title = "Show FOV Circle",
+    Default = false,
+    Callback = function(value)
+        Aimbot.Config.showFovCircle = value
+    end
+})
+
+Tabs.Aimbot:AddToggle("HoldTarget", {
+    Title = "Hold Target (RMB)",
+    Default = false,
+    Callback = function(value)
+        Aimbot.Config.holdPkmMode = value
+    end
+})
+
+Tabs.Aimbot:AddToggle("WallCheck", {
+    Title = "Wall Check",
+    Default = true,
+    Callback = function(value)
+        Aimbot.Config.wallCheck = value
+    end
+})
+
+Tabs.Aimbot:AddToggle("FullTarget", {
+    Title = "Full Target (Lock)",
+    Default = false,
+    Callback = function(value)
+        Aimbot.Config.fullTarget = value
+    end
+})
+
+-- ESP настройки в UI
+Tabs.ESP:AddToggle("ESPGlobal", {
+    Title = "ESP Global",
+    Description = "Вкл/выкл весь ESP",
+    Default = true,
+    Callback = function(value)
+        ESP.Enabled = value  -- добавь в ESP.lua переменную ESP.Enabled
+    end
+})
+
+Tabs.ESP:AddToggle("ESPBoxes", {
+    Title = "Box ESP",
+    Default = true,
+    Callback = function(value)
+        ESP.Config.BoxEnabled = value
+    end
+})
+
+Tabs.ESP:AddToggle("ESPTracers", {
+    Title = "Tracers",
+    Default = true,
+    Callback = function(value)
+        ESP.Config.TracerEnabled = value
+    end
+})
+
+Tabs.ESP:AddToggle("ESPNames", {
+    Title = "Names",
+    Default = true,
+    Callback = function(value)
+        ESP.Config.NameEnabled = value
+    end
+})
+
+Tabs.ESP:AddToggle("ESPDistance", {
+    Title = "Distance",
+    Default = true,
+    Callback = function(value)
+        ESP.Config.ShowDistance = value
+    end
+})
+
+Tabs.ESP:AddToggle("ESPTeamCheck", {
+    Title = "Team Check",
+    Default = true,
+    Callback = function(value)
+        ESP.Config.TeamCheck = value
+    end
+})
+
+Tabs.ESP:AddSlider("ESPMaxDist", {
+    Title = "Max Render Distance",
+    Min = 100,
+    Max = 10000,
+    Default = 5000,
+    Callback = function(value)
+        ESP.Config.MaxRenderDistance = value
+    end
+})
+
+-- Сохранение настроек
+SaveManager:SetLibrary(Library)
+InterfaceManager:SetLibrary(Library)
+SaveManager:IgnoreThemeSettings()
+SaveManager:SetIgnoreIndexes({})
+InterfaceManager:SetFolder("FluentMyExploit")
+SaveManager:SetFolder("FluentMyExploit/saves")
+InterfaceManager:BuildInterfaceSection(Tabs.Settings)
+SaveManager:BuildConfigSection(Tabs.Settings)
+Window:SelectTab(1)
+SaveManager:LoadAutoloadConfig()
+
+print("Exploit полностью загружен! Используй LeftControl для скрытия окна.")

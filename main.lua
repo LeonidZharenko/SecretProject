@@ -30,7 +30,7 @@ Tabs.Main:AddParagraph({
     Content = "Это твой универсальный Aimbot + ESP. Настройки сохраняются автоматически."
 })
 
--- Загрузка модулей (твои Aimbot и ESP)
+-- Загрузка модулей
 local Aimbot = loadstring(game:HttpGet("https://raw.githubusercontent.com/LeonidZharenko/SecretProject/main/modules/Aimbot.lua"))()
 local ESP = loadstring(game:HttpGet("https://raw.githubusercontent.com/LeonidZharenko/SecretProject/main/modules/ESP.lua"))()
 
@@ -38,14 +38,13 @@ local ESP = loadstring(game:HttpGet("https://raw.githubusercontent.com/LeonidZha
 Aimbot.Init()
 ESP.Init()
 
--- Aimbot настройки в UI
+-- Aimbot настройки в UI (полный набор из твоего кода)
 Tabs.Aimbot:AddToggle("AimbotEnabled", {
     Title = "Aimbot Enabled",
     Description = "Вкл/выкл аимбот",
     Default = false,
     Callback = function(value)
         Aimbot.Enabled = value
-        -- Обнови status label если есть
     end
 })
 
@@ -115,13 +114,13 @@ Tabs.Aimbot:AddToggle("FullTarget", {
     end
 })
 
--- ESP настройки в UI
+-- ESP настройки в UI (полный набор)
 Tabs.ESP:AddToggle("ESPGlobal", {
     Title = "ESP Global",
     Description = "Вкл/выкл весь ESP",
     Default = true,
     Callback = function(value)
-        ESP.Enabled = value  -- добавь в ESP.lua переменную ESP.Enabled
+        ESP.Enabled = value
     end
 })
 
@@ -170,12 +169,13 @@ Tabs.ESP:AddSlider("ESPMaxDist", {
     Min = 100,
     Max = 10000,
     Default = 5000,
+    Rounding = 0,
     Callback = function(value)
         ESP.Config.MaxRenderDistance = value
     end
 })
 
--- Сохранение настроек
+-- Сохранение настроек (Fluent SaveManager)
 SaveManager:SetLibrary(Library)
 InterfaceManager:SetLibrary(Library)
 SaveManager:IgnoreThemeSettings()

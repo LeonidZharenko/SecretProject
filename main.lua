@@ -1,5 +1,4 @@
--- Orion Lib вместо Fluent (работает, где Fluent блочат)
-local OrionLib = loadstring(game:HttpGet("https://raw.githubusercontent.com/shlexware/Orion/main/source"))()
+local OrionLib = loadstring(game:HttpGet("https://pastebin.com/raw/4y6kX7kL"))()
 
 local Window = OrionLib:MakeWindow({
     Name = "My Exploit | Aimbot + ESP",
@@ -8,7 +7,6 @@ local Window = OrionLib:MakeWindow({
     ConfigFolder = "MyExploit"
 })
 
--- Tabs
 local AimbotTab = Window:MakeTab({
     Name = "Aimbot",
     Icon = "rbxassetid://4483345998",
@@ -21,16 +19,14 @@ local VisualTab = Window:MakeTab({
     PremiumOnly = false
 })
 
--- Загрузка конфига
+-- Загрузка твоих модулей (они уже работают, как показал тест)
 local Config = loadstring(game:HttpGet("https://raw.githubusercontent.com/LeonidZharenko/SecretProject/main/config.lua"))()
 
--- Aimbot модуль
 local Aimbot = loadstring(game:HttpGet("https://raw.githubusercontent.com/LeonidZharenko/SecretProject/main/modules/Aimbot.lua"))()
-Aimbot.Init(Config, AimbotTab)  -- передаём вкладку Orion
+Aimbot.Init(Config, AimbotTab)
 
--- ESP модуль
 local ESP = loadstring(game:HttpGet("https://raw.githubusercontent.com/LeonidZharenko/SecretProject/main/modules/ESP.lua"))()
-ESP.Init(Config, VisualTab)  -- передаём вкладку Orion
+ESP.Init(Config, VisualTab)
 
 OrionLib:MakeNotification({
     Name = "Success",

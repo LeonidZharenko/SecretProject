@@ -1,11 +1,11 @@
 local ESP = {}
 
-function ESP.Init(config, tab)
+function ESP.Init(config, tab)  -- tab — это Orion Tab
     ESP.Config = config.ESP
 
-    -- Fluent UI в вкладке tab
+    -- UI в Orion (вкладка tab)
     tab:AddToggle({
-        Title = "Box ESP",
+        Name = "Box ESP",
         Default = true,
         Callback = function(value)
             ESP.Config.BoxEnabled = value
@@ -13,7 +13,7 @@ function ESP.Init(config, tab)
     })
 
     tab:AddToggle({
-        Title = "Tracers",
+        Name = "Tracers",
         Default = true,
         Callback = function(value)
             ESP.Config.TracerEnabled = value
@@ -21,7 +21,7 @@ function ESP.Init(config, tab)
     })
 
     tab:AddToggle({
-        Title = "Names",
+        Name = "Names",
         Default = true,
         Callback = function(value)
             ESP.Config.NameEnabled = value
@@ -29,7 +29,7 @@ function ESP.Init(config, tab)
     })
 
     tab:AddToggle({
-        Title = "Distance",
+        Name = "Distance",
         Default = true,
         Callback = function(value)
             ESP.Config.ShowDistance = value
@@ -37,7 +37,7 @@ function ESP.Init(config, tab)
     })
 
     tab:AddToggle({
-        Title = "Team Check",
+        Name = "Team Check",
         Default = true,
         Callback = function(value)
             ESP.Config.TeamCheck = value
@@ -45,16 +45,17 @@ function ESP.Init(config, tab)
     })
 
     tab:AddSlider({
-        Title = "Max Render Distance",
+        Name = "Max Render Distance",
         Min = 100,
         Max = 10000,
+        Increment = 100,
         Default = ESP.Config.MaxRenderDistance,
         Callback = function(value)
             ESP.Config.MaxRenderDistance = value
         end
     })
 
-    -- Весь твой код ESP (логика)
+    -- Весь твой код ESP (логика без изменений)
     local Players = game:GetService("Players")
     local RunService = game:GetService("RunService")
     local Camera = workspace.CurrentCamera
@@ -205,7 +206,7 @@ function ESP.Init(config, tab)
         end
     end
 
-    -- Инициализация
+    -- Инициализация ESP
     for _, player in ipairs(Players:GetPlayers()) do
         task.spawn(function()
             task.wait(0.8)

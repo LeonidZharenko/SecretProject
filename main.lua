@@ -677,7 +677,7 @@ local function cleanup()
         Aimbot.cleanup()
     end
     
-    -- Сохраняем настройки перед выходом
+    -- Сохраняем настройки
     local success = pcall(function()
         SaveManager:Save("AllSettings", saveAllSettings())
     end)
@@ -687,31 +687,16 @@ local function cleanup()
     end
 end
 
--- Обработка закрытия GUI
-Window:OnClose(function()
-    cleanup()
-end)
-
--- Сохраняем настройки при изменении (автосохранение)
-local lastSaveTime = 0
-local function autoSave()
-    local currentTime = tick()
-    if currentTime - lastSaveTime > 30 then -- Сохраняем каждые 30 секунд
+-- Автосохранение каждые 30 секунд
+task.spawn(function()
+    while true do
+        wait(30)
         local success = pcall(function()
             SaveManager:Save("AllSettings", saveAllSettings())
         end)
         if success then
             print("✅ Автосохранение настроек")
         end
-        lastSaveTime = currentTime
-    end
-end
-
--- Запускаем автосохранение
-task.spawn(function()
-    while true do
-        wait(30)
-        autoSave()
     end
 end)
 
@@ -719,6 +704,27 @@ end)
 game:GetService("Players").LocalPlayer:GetPropertyChangedSignal("Parent"):Connect(function()
     if not game:GetService("Players").LocalPlayer.Parent then
         cleanup()
+    end
+end)
+
+-- Сохраняем при закрытии GUI (через сборку мусора)
+local connection
+connection = game:GetService("RunService").Heartbeat:Connect(function()
+    -- Проверяем, существует ли GUI
+    local guiExists = false
+    for _, v in pairs(game:GetService("CoreGui"):GetChildren()) do
+        if v.Name == "Fluent" then
+            guiExists = true
+            break
+        end
+    end
+    
+    if not guiExists then
+        cleanup()
+        if connection then
+            connection:Disconnect()
+            connection = nil
+        end
     end
 end)
 

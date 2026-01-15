@@ -687,9 +687,39 @@ local function cleanup()
     end
 end
 
--- Обработка закрытия
-game:BindToClose(function()
+-- Обработка закрытия GUI
+Window:OnClose(function()
     cleanup()
+end)
+
+-- Сохраняем настройки при изменении (автосохранение)
+local lastSaveTime = 0
+local function autoSave()
+    local currentTime = tick()
+    if currentTime - lastSaveTime > 30 then -- Сохраняем каждые 30 секунд
+        local success = pcall(function()
+            SaveManager:Save("AllSettings", saveAllSettings())
+        end)
+        if success then
+            print("✅ Автосохранение настроек")
+        end
+        lastSaveTime = currentTime
+    end
+end
+
+-- Запускаем автосохранение
+task.spawn(function()
+    while true do
+        wait(30)
+        autoSave()
+    end
+end)
+
+-- Обработка выхода из игры
+game:GetService("Players").LocalPlayer:GetPropertyChangedSignal("Parent"):Connect(function()
+    if not game:GetService("Players").LocalPlayer.Parent then
+        cleanup()
+    end
 end)
 
 -- Возвращаем объекты для внешнего доступа

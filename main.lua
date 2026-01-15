@@ -1,40 +1,75 @@
--- main.lua - ДЕБАГ версия
-print("=== НАЧАЛО ЗАГРУЗКИ ===")
+-- main.lua (ДЕТАЛЬНАЯ ВЕРСИЯ)
+print("=== НАЧАЛО ЗАГРУЗКИ MM2 ESP ===")
 
--- Ждем игрока
-while not game:GetService("Players").LocalPlayer do
-    wait()
+-- Ждем полной загрузки
+wait(2)
+
+-- Проверяем сервисы
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
+
+if not player then
+    print("⚠️ Игрок не найден, ждем...")
+    player = Players.PlayerAdded:Wait()
 end
 
-local player = game:GetService("Players").LocalPlayer
-print("Игрок:", player.Name)
+print("✅ Игрок:", player.Name)
 
 -- Ждем PlayerGui
-if not player:FindFirstChild("PlayerGui") then
-    player:WaitForChild("PlayerGui")
+if not player:WaitForChild("PlayerGui", 5) then
+    warn("❌ PlayerGui не загрузился!")
+    return
 end
-print("PlayerGui загружен")
+
+print("✅ PlayerGui загружен")
 
 -- Загружаем ESP
-print("Загружаем ESP модуль...")
+print("📥 Загружаем ESP модуль...")
 local ESP = loadstring(game:HttpGet("https://raw.githubusercontent.com/LeonidZharenko/SecretProject/main/modules/ESP.lua"))()
-print("ESP загружен. Тип:", typeof(ESP))
-print("ESP имеет updateSetting?", ESP.updateSetting ~= nil)
+print("✅ ESP модуль загружен")
 
--- Загружаем и выполняем UI
-print("Загружаем UI модуль...")
+-- Проверяем функции ESP
+if not ESP then
+    warn("❌ ESP модуль вернул nil")
+    return
+end
+
+if not ESP.updateSetting then
+    warn("❌ ESP.updateSetting не найдена")
+end
+
+if not ESP.getSetting then
+    warn("❌ ESP.getSetting не найдена")
+end
+
+print("✅ Функции ESP проверены")
+
+-- Загружаем UI
+print("📥 Загружаем UI модуль...")
 local uiCode = game:HttpGet("https://raw.githubusercontent.com/LeonidZharenko/SecretProject/main/modules/Ui.lua")
-print("Длина UI кода:", #uiCode)
+print("✅ Код UI получен, длина:", #uiCode)
 
+-- Выполняем UI
 local uiFunc = loadstring(uiCode)
-print("UI функция загружена:", uiFunc ~= nil)
+if not uiFunc then
+    warn("❌ Не удалось загрузить функцию UI")
+    return
+end
 
-print("Вызываем UI функцию...")
-local success, err = pcall(uiFunc, ESP)
+print("✅ UI функция загружена")
+
+-- Вызываем UI
+local success, window = pcall(uiFunc, ESP)
 if not success then
-    warn("ОШИБКА при вызове UI:", err)
+    warn("❌ Ошибка при вызове UI функции:", window)
+    return
+end
+
+if window then
+    print("✅ UI функция вернула окно")
 else
-    print("✅ UI успешно вызван!")
+    warn("⚠️ UI функция вернула nil")
 end
 
 print("=== ЗАГРУЗКА ЗАВЕРШЕНА ===")
+print("🎮 Нажмите INSERT для показа/скрытия меню")

@@ -110,7 +110,7 @@ Tabs.Main:AddParagraph({
     Content = "Полный набор для Murder Mystery 2\n\nФункции:\n• ESP игроков с Box, Tracer, Names\n• Aimbot с FOV и настройками\n• Определение ролей (Murderer/Sheriff)\n• GunDrop ESP (оптимизированный)\n• Настройка цветов\n• Сохранение настроек"
 })
 
--- Управление (используем локальные переменные для текста)
+-- Управление
 local aimKeyText = "Insert"
 local targetKeyText = "RMB"
 
@@ -363,16 +363,17 @@ Tabs.Aimbot:AddToggle("IgnoreTeams", {
     end
 })
 
--- Раздел биндов - Используем простые строки для описаний
-local currentAimBindText = aimKeyText
-local currentTargetBindText = targetKeyText
-
-local BindSection = Tabs.Aimbot:AddSection({
+-- Раздел биндов (без AddSection)
+Tabs.Aimbot:AddParagraph({
     Title = "Привязки клавиш",
     Content = "Назначьте клавиши для управления аимботом"
 })
 
-BindSection:AddButton({
+-- Локальные переменные для текста биндов
+local currentAimBindText = aimKeyText
+local currentTargetBindText = targetKeyText
+
+Tabs.Aimbot:AddButton({
     Title = "Назначить клавишу аима",
     Description = "Текущая: " .. currentAimBindText,
     Callback = function()
@@ -387,7 +388,7 @@ BindSection:AddButton({
     end
 })
 
-BindSection:AddButton({
+Tabs.Aimbot:AddButton({
     Title = "Назначить клавишу удержания",
     Description = "Текущая: " .. currentTargetBindText,
     Callback = function()
@@ -402,7 +403,7 @@ BindSection:AddButton({
     end
 })
 
-BindSection:AddButton({
+Tabs.Aimbot:AddButton({
     Title = "Сбросить бинды",
     Description = "Вернуть настройки по умолчанию",
     Callback = function()
@@ -418,6 +419,12 @@ BindSection:AddButton({
 })
 
 -- Вкладка Визуал
+-- Цвета ESP
+Tabs.Visual:AddParagraph({
+    Title = "Цвета ESP",
+    Content = "Настройка цветов для ESP элементов"
+})
+
 Tabs.Visual:AddColorpicker("BoxColor", {
     Title = "Цвет рамок",
     Default = ESP.getSetting and ESP.getSetting("BoxColor") or Color3.fromRGB(255, 255, 255),
@@ -485,13 +492,13 @@ Tabs.Visual:AddColorpicker("GunDropColor", {
 })
 
 -- Цвета Aimbot
-local VisualSection = Tabs.Visual:AddSection({
+Tabs.Visual:AddParagraph({
     Title = "Цвета Aimbot",
     Content = "Настройки отображения аимбота"
 })
 
 local fovColor = Color3.fromRGB(255, 255, 255)
-VisualSection:AddColorpicker("FovCircleColor", {
+Tabs.Visual:AddColorpicker("FovCircleColor", {
     Title = "Цвет FOV круга",
     Default = fovColor,
     Callback = function(value)
@@ -499,8 +506,8 @@ VisualSection:AddColorpicker("FovCircleColor", {
     end
 })
 
--- Дополнительные визуальные настройки
-local ExtraSection = Tabs.Visual:AddSection({
+-- Дополнительные настройки
+Tabs.Visual:AddParagraph({
     Title = "Дополнительные настройки",
     Content = "Дополнительные визуальные эффекты"
 })
@@ -511,7 +518,7 @@ local extraSettings = {
     GlowEffect = false
 }
 
-ExtraSection:AddToggle("OutlineEnabled", {
+Tabs.Visual:AddToggle("OutlineEnabled", {
     Title = "Outline эффект",
     Description = "Добавляет контур к ESP",
     Default = extraSettings.OutlineEnabled,
@@ -523,7 +530,7 @@ ExtraSection:AddToggle("OutlineEnabled", {
     end
 })
 
-ExtraSection:AddToggle("ChamsEnabled", {
+Tabs.Visual:AddToggle("ChamsEnabled", {
     Title = "Chams эффект",
     Description = "Заливка игроков цветом",
     Default = extraSettings.ChamsEnabled,
@@ -535,7 +542,7 @@ ExtraSection:AddToggle("ChamsEnabled", {
     end
 })
 
-ExtraSection:AddToggle("GlowEffect", {
+Tabs.Visual:AddToggle("GlowEffect", {
     Title = "Glow эффект",
     Description = "Свечение вокруг игроков",
     Default = extraSettings.GlowEffect,

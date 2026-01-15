@@ -1,4 +1,4 @@
--- modules/esp.lua
+-- modules/esp.lua (ИСПРАВЛЕННАЯ ВЕРСИЯ)
 local ESP = {}
 
 -- Сервисы
@@ -17,7 +17,7 @@ local weaponScanInterval = 2
 local cachedWeapons = {}
 local lastCacheUpdate = 0
 
--- Настройки ESP (все копируем из оригинального SETTINGS)
+-- Настройки ESP (с добавленными цветами)
 ESP.Settings = {
     ESPEnabled        = true,
     BoxEnabled        = true,
@@ -31,6 +31,9 @@ ESP.Settings = {
     BoxColor          = Color3.fromRGB(255, 255, 255),
     TracerColor       = Color3.fromRGB(255, 255, 255),
     NameColor         = Color3.fromRGB(255, 255, 255),
+    MurdererColor     = Color3.fromRGB(255, 0, 0),      -- Красный для Murderer
+    SheriffColor      = Color3.fromRGB(0, 100, 255),    -- Синий для Sheriff
+    GunDropColor      = Color3.fromRGB(0, 255, 0),      -- Зеленый для GunDrop
     TracerFrom        = "Bottom",
     DebugPrint        = false,
     MaxDepth          = math.huge,
@@ -75,14 +78,11 @@ end
 
 -- Вспомогательная функция для обновления цветов в реальном времени
 ESP.updateColor = function(colorKey, colorValue)
-    ESP.Settings[colorKey] = colorValue
-    -- Можно добавить логику для мгновенного обновления цветов
+    if ESP.Settings[colorKey] ~= nil then
+        ESP.Settings[colorKey] = colorValue
+        print("[ESP] Цвет обновлен:", colorKey, "=", tostring(colorValue))
+    end
 end
-
--- ==============================================
--- ВСЕ ОСТАЛЬНЫЕ ФУНКЦИИ ИЗ ОРИГИНАЛЬНОГО СКРИПТА
--- (копируем без изменений, только заменяем SETTINGS на ESP.Settings)
--- ==============================================
 
 -- УЛУЧШЕННАЯ ФУНКЦИЯ: Определение роли в MM2
 local function getMM2Role(player)
@@ -296,7 +296,7 @@ local function updateWeaponESP()
                         elements.box.Thickness = 2
                         elements.box.Filled = false
                         elements.box.Transparency = 0.7
-                        elements.box.Color = Color3.fromRGB(0, 255, 0)
+                        elements.box.Color = ESP.Settings.GunDropColor
                         
                         -- Создаем текст
                         elements.text = Drawing.new("Text")
@@ -305,7 +305,7 @@ local function updateWeaponESP()
                         elements.text.Outline = true
                         elements.text.Center = true
                         elements.text.Font = 2
-                        elements.text.Color = Color3.fromRGB(0, 255, 0)
+                        elements.text.Color = ESP.Settings.GunDropColor
                         
                         weaponElements[weaponId] = elements
                     end
@@ -477,7 +477,7 @@ local function updateESP()
         local boxW = scale * 0.6
         local boxH = scale
         
-        -- Определяем цвет в зависимости от роли в MM2
+        -- Определяем цвет в зависимости от роли в MM2 (ИСПРАВЛЕНО - используем настройки цветов)
         local boxColor = ESP.Settings.BoxColor
         local tracerColor = ESP.Settings.TracerColor
         local nameColor = ESP.Settings.NameColor
@@ -485,13 +485,13 @@ local function updateESP()
         if ESP.Settings.MM2RoleESP then
             local role = getMM2Role(player)
             if role == "Murderer" then
-                boxColor = Color3.fromRGB(255, 0, 0)
-                tracerColor = Color3.fromRGB(255, 0, 0)
-                nameColor = Color3.fromRGB(255, 0, 0)
+                boxColor = ESP.Settings.MurdererColor
+                tracerColor = ESP.Settings.MurdererColor
+                nameColor = ESP.Settings.MurdererColor
             elseif role == "Sheriff" then
-                boxColor = Color3.fromRGB(0, 100, 255)
-                tracerColor = Color3.fromRGB(0, 100, 255)
-                nameColor = Color3.fromRGB(0, 100, 255)
+                boxColor = ESP.Settings.SheriffColor
+                tracerColor = ESP.Settings.SheriffColor
+                nameColor = ESP.Settings.SheriffColor
             end
         end
 

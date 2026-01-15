@@ -11,8 +11,30 @@ end)
 if not successESP or not ESP then
     warn("❌ Не удалось загрузить ESP модуль!")
     ESP = {
-        getSetting = function(key) return false end,
-        updateSetting = function(key, value) print("ESP: " .. key .. " = " .. tostring(value)) end
+        getSetting = function(key) 
+            local defaults = {
+                ESPEnabled = false,
+                BoxEnabled = false,
+                TracerEnabled = false,
+                NameEnabled = false,
+                ShowDistance = false,
+                TeamCheck = false,
+                MM2RoleESP = false,
+                WeaponESP = false,
+                MaxRenderDistance = 5000,
+                TracerFrom = "Bottom",
+                BoxColor = Color3.fromRGB(255, 255, 255),
+                TracerColor = Color3.fromRGB(255, 255, 255),
+                NameColor = Color3.fromRGB(255, 255, 255)
+            }
+            return defaults[key]
+        end,
+        updateSetting = function(key, value) 
+            print("[ESP] Настройка обновлена: " .. key .. " = " .. tostring(value)) 
+        end,
+        updateColor = function(key, value)
+            print("[ESP] Цвет обновлен: " .. key .. " = " .. tostring(value))
+        end
     }
 end
 
@@ -36,15 +58,27 @@ if not successAimbot or not Aimbot then
                 ignoreTeams = true,
                 holdPkmMode = false
             }
-            return defaults[key] or false
+            return defaults[key]
         end,
-        updateSetting = function(key, value) print("Aimbot: " .. key .. " = " .. tostring(value)) end,
+        updateSetting = function(key, value) 
+            print("[Aimbot] Настройка обновлена: " .. key .. " = " .. tostring(value)) 
+        end,
         getBindText = function(bindType) 
-            return bindType == "Aim" and "Insert" or "RMB"
+            if bindType == "Aim" then
+                return "Insert"
+            else
+                return "RMB"
+            end
         end,
-        startBind = function(bindType) print("Назначьте клавишу для: " .. bindType) end,
-        resetBinds = function() print("Бинды сброшены") end,
-        cleanup = function() end
+        startBind = function(bindType) 
+            print("[Aimbot] Ожидание клавиши для: " .. bindType) 
+        end,
+        resetBinds = function() 
+            print("[Aimbot] Бинды сброшены") 
+        end,
+        cleanup = function() end,
+        saveSettings = function() return {} end,
+        loadSettings = function() end
     }
 end
 
@@ -76,14 +110,23 @@ Tabs.Main:AddParagraph({
     Content = "Полный набор для Murder Mystery 2\n\nФункции:\n• ESP игроков с Box, Tracer, Names\n• Aimbot с FOV и настройками\n• Определение ролей (Murderer/Sheriff)\n• GunDrop ESP (оптимизированный)\n• Настройка цветов\n• Сохранение настроек"
 })
 
--- Управление (без table в тексте)
-local aimKeyText = Aimbot.getBindText and Aimbot.getBindText("Aim") or "Insert"
-local targetKeyText = Aimbot.getBindText and Aimbot.getBindText("Target") or "RMB"
+-- Управление (используем локальные переменные для текста)
+local aimKeyText = "Insert"
+local targetKeyText = "RMB"
+
+if Aimbot and Aimbot.getBindText then
+    aimKeyText = Aimbot.getBindText("Aim") or "Insert"
+    targetKeyText = Aimbot.getBindText("Target") or "RMB"
+end
+
+local managementText = "Нажми INSERT для скрытия/показа интерфейса\n" ..
+                       "Нажми " .. aimKeyText .. " для включения Aimbot\n" ..
+                       "Нажми " .. targetKeyText .. " для удержания цели\n" ..
+                       "Настройки сохраняются автоматически"
 
 Tabs.Main:AddParagraph({
     Title = "Управление",
-    Content = string.format("Нажми INSERT для скрытия/показа интерфейса\nНажми %s для включения Aimbot\nНажми %s для удержания цели\nНастройки сохраняются автоматически", 
-        aimKeyText, targetKeyText)
+    Content = managementText
 })
 
 -- Вкладка ESP
@@ -320,7 +363,10 @@ Tabs.Aimbot:AddToggle("IgnoreTeams", {
     end
 })
 
--- Раздел биндов (исправленная версия)
+-- Раздел биндов - Используем простые строки для описаний
+local currentAimBindText = aimKeyText
+local currentTargetBindText = targetKeyText
+
 local BindSection = Tabs.Aimbot:AddSection({
     Title = "Привязки клавиш",
     Content = "Назначьте клавиши для управления аимботом"
@@ -328,7 +374,7 @@ local BindSection = Tabs.Aimbot:AddSection({
 
 BindSection:AddButton({
     Title = "Назначить клавишу аима",
-    Description = "Текущая клавиша: " .. (Aimbot.getBindText and Aimbot.getBindText("Aim") or "Insert"),
+    Description = "Текущая: " .. currentAimBindText,
     Callback = function()
         Library:Notify({
             Title = "Aimbot",
@@ -343,7 +389,7 @@ BindSection:AddButton({
 
 BindSection:AddButton({
     Title = "Назначить клавишу удержания",
-    Description = "Текущая клавиша: " .. (Aimbot.getBindText and Aimbot.getBindText("Target") or "RMB"),
+    Description = "Текущая: " .. currentTargetBindText,
     Callback = function()
         Library:Notify({
             Title = "Aimbot",
@@ -358,7 +404,7 @@ BindSection:AddButton({
 
 BindSection:AddButton({
     Title = "Сбросить бинды",
-    Description = "Вернуть настройки клавиш по умолчанию",
+    Description = "Вернуть настройки по умолчанию",
     Callback = function()
         if Aimbot.resetBinds then
             Aimbot.resetBinds()
@@ -597,18 +643,21 @@ end)
 Window:SelectTab(1)
 
 -- Уведомление
+local notificationText = "Меню успешно загружено!"
+if aimKeyText ~= "Insert" then
+    notificationText = notificationText .. "\nНажми " .. aimKeyText .. " для включения Aimbot"
+end
+
 Library:Notify({
     Title = "MM2 ESP + Aimbot Hub",
-    Content = "Меню успешно загружено!",
-    SubContent = string.format("Нажми INSERT для скрытия меню\nНажми %s для включения Aimbot", 
-        Aimbot.getBindText and Aimbot.getBindText("Aim") or "Insert"),
+    Content = notificationText,
     Duration = 5
 })
 
 print("🎮 MM2 ESP + Aimbot Hub успешно загружен!")
 print("📌 Нажми INSERT для скрытия/показа интерфейса")
-print("🎯 Aimbot клавиша: " .. (Aimbot.getBindText and Aimbot.getBindText("Aim") or "Insert"))
-print("🎯 Target клавиша: " .. (Aimbot.getBindText and Aimbot.getBindText("Target") or "RMB"))
+print("🎯 Aimbot клавиша: " .. aimKeyText)
+print("🎯 Target клавиша: " .. targetKeyText)
 
 -- Инициализируем ESP если есть функция init
 if ESP and ESP.init then
@@ -634,26 +683,6 @@ end
 -- Обработка закрытия
 game:BindToClose(function()
     cleanup()
-end)
-
--- Сохраняем при выходе
-game:GetService("Players").LocalPlayer.PlayerGui.ChildRemoved:Connect(function(child)
-    if child.Name == "Fluent" then
-        cleanup()
-    end
-end)
-
--- Автосохранение каждые 30 секунд
-task.spawn(function()
-    while true do
-        wait(30)
-        local success = pcall(function()
-            SaveManager:Save("AllSettings", saveAllSettings())
-        end)
-        if success then
-            print("✅ Автосохранение настроек")
-        end
-    end
 end)
 
 -- Возвращаем объекты для внешнего доступа

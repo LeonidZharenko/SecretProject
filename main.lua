@@ -1,29 +1,18 @@
--- main.lua (ФИНАЛЬНАЯ ВЕРСИЯ С ESP И AIMBOT)
+-- main.lua для MM2 ESP с Fluent UI + Aimbot
 local Library = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
 local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua"))()
 local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
 
--- Загружаем ESP модуль
-local ESP = loadstring(game:HttpGet("https://raw.githubusercontent.com/LeonidZharenko/SecretProject/main/modules/esp.lua"))()
+-- Загружаем модули
+local ESP = loadstring(game:HttpGet("https://raw.githubusercontent.com/LeonidZharenko/SecretProject/main/modules/ESP.lua"))()
+local Aimbot = loadstring(game:HttpGet("https://raw.githubusercontent.com/LeonidZharenko/SecretProject/main/modules/Aimbot.lua"))()
 
--- Загружаем Aimbot модуль
-local Aimbot = loadstring(game:HttpGet("https://raw.githubusercontent.com/LeonidZharenko/SecretProject/main/modules/aimbot.lua"))()
-
--- Проверяем загрузку модулей
-if not ESP then
-    error("❌ Не удалось загрузить ESP модуль!")
-end
-
-if not Aimbot then
-    warn("⚠️ Aimbot модуль не загружен, будет работать только ESP")
-end
-
--- Создаем окно Fluent
+-- Создаем окно
 local Window = Library:CreateWindow({
-    Title = "MM2 ESP Hub",
+    Title = "MM2 ESP + Aimbot Hub",
     SubTitle = "by LeonidZharenko",
     TabWidth = 160,
-    Size = UDim2.fromOffset(620, 460),
+    Size = UDim2.fromOffset(600, 460),
     Acrylic = true,
     Theme = "Darker",
     AccentColor = Color3.fromRGB(0, 120, 215),
@@ -34,8 +23,8 @@ local Window = Library:CreateWindow({
 local Tabs = {
     Main = Window:AddTab({ Title = "Главная", Icon = "home" }),
     ESP = Window:AddTab({ Title = "ESP", Icon = "eye" }),
-    Visual = Window:AddTab({ Title = "Визуал", Icon = "palette" }),
     Aimbot = Window:AddTab({ Title = "Aimbot", Icon = "target" }),
+    Visual = Window:AddTab({ Title = "Визуал", Icon = "palette" }),
     Settings = Window:AddTab({ Title = "Настройки", Icon = "settings" }),
 }
 
@@ -43,12 +32,15 @@ local Tabs = {
 local playerName = game.Players.LocalPlayer.Name 
 Tabs.Main:AddParagraph({
     Title = "Добро пожаловать, " .. playerName .. "!", 
-    Content = "Оптимизированный ESP и Aimbot для Murder Mystery 2\n\nФункции:\n• ESP игроков с Box, Tracer, Names\n• Определение ролей (Murderer/Sheriff)\n• GunDrop ESP (оптимизированный)\n• Aimbot с несколькими методами\n• Настройка цветов и биндов\n• Сохранение настроек"
+    Content = "Полный набор для Murder Mystery 2\n\nФункции:\n• ESP игроков с Box, Tracer, Names\n• Aimbot с FOV и настройками\n• Определение ролей (Murderer/Sheriff)\n• GunDrop ESP (оптимизированный)\n• Настройка цветов\n• Сохранение настроек"
 })
 
 Tabs.Main:AddParagraph({
     Title = "Управление",
-    Content = "Нажми INSERT для скрытия/показа интерфейса\n\nНастройки сохраняются автоматически"
+    Content = "Нажми INSERT для скрытия/показа интерфейса\n" .. 
+             "Нажми " .. Aimbot.getBindText("Aim") .. " для включения Aimbot\n" ..
+             "Нажми " .. Aimbot.getBindText("Target") .. " для удержания цели\n" ..
+             "Настройки сохраняются автоматически"
 })
 
 -- Вкладка ESP
@@ -140,9 +132,153 @@ Tabs.ESP:AddDropdown("TracerFrom", {
     Title = "Начало трассеров",
     Description = "Откуда идут линии",
     Values = {"Bottom", "Center", "Top"},
-    Default = ESP.getSetting("TracerFrom"),
+    Default = ESP.getSetting("TracerFrom") or "Bottom",
     Callback = function(value)
         ESP.updateSetting("TracerFrom", value)
+    end
+})
+
+-- Вкладка Aimbot
+Tabs.Aimbot:AddToggle("AimbotEnabled", {
+    Title = "Включить Aimbot",
+    Description = "Активирует систему аимбота",
+    Default = Aimbot.getSetting("Enabled"),
+    Callback = function(value)
+        Aimbot.updateSetting("Enabled", value)
+    end
+})
+
+Tabs.Aimbot:AddToggle("HoldPkmMode", {
+    Title = "Hold PKM Mode",
+    Description = "Требовать удержание клавиши для работы",
+    Default = Aimbot.getSetting("holdPkmMode"),
+    Callback = function(value)
+        Aimbot.updateSetting("holdPkmMode", value)
+    end
+})
+
+Tabs.Aimbot:AddDropdown("TargetPart", {
+    Title = "Часть тела",
+    Description = "Выберите часть тела для прицеливания",
+    Values = {"Head", "UpperTorso", "HumanoidRootPart"},
+    Default = Aimbot.getSetting("targetPart"),
+    Callback = function(value)
+        Aimbot.updateSetting("targetPart", value)
+    end
+})
+
+Tabs.Aimbot:AddDropdown("AimMethod", {
+    Title = "Метод аима",
+    Description = "Выберите метод прицеливания",
+    Values = {"Mouse", "Camera"},
+    Default = Aimbot.getSetting("aimMethod"),
+    Callback = function(value)
+        Aimbot.updateSetting("aimMethod", value)
+    end
+})
+
+Tabs.Aimbot:AddSlider("FovRadius", {
+    Title = "Радиус FOV",
+    Description = "Угол обзора для поиска цели",
+    Default = Aimbot.getSetting("fovRadius"),
+    Min = 50,
+    Max = 600,
+    Rounding = 0,
+    Callback = function(value)
+        Aimbot.updateSetting("fovRadius", value)
+    end
+})
+
+Tabs.Aimbot:AddSlider("Smoothness", {
+    Title = "Плавность",
+    Description = "Уровень сглаживания прицеливания",
+    Default = Aimbot.getSetting("smoothness"),
+    Min = 0.05,
+    Max = 1,
+    Rounding = 2,
+    Callback = function(value)
+        Aimbot.updateSetting("smoothness", value)
+    end
+})
+
+Tabs.Aimbot:AddToggle("ShowFovCircle", {
+    Title = "Показывать FOV круг",
+    Description = "Отображает круг радиуса FOV на экране",
+    Default = Aimbot.getSetting("showFovCircle"),
+    Callback = function(value)
+        Aimbot.updateSetting("showFovCircle", value)
+    end
+})
+
+Tabs.Aimbot:AddToggle("WallCheck", {
+    Title = "Проверка стен",
+    Description = "Игнорировать цели за стенами",
+    Default = Aimbot.getSetting("wallCheck"),
+    Callback = function(value)
+        Aimbot.updateSetting("wallCheck", value)
+    end
+})
+
+Tabs.Aimbot:AddToggle("FullTarget", {
+    Title = "Full Target",
+    Description = "Удерживать цель до выхода из FOV",
+    Default = Aimbot.getSetting("fullTarget"),
+    Callback = function(value)
+        Aimbot.updateSetting("fullTarget", value)
+    end
+})
+
+Tabs.Aimbot:AddToggle("IgnoreTeams", {
+    Title = "Игнорировать команды",
+    Description = "Не целиться в союзников",
+    Default = Aimbot.getSetting("ignoreTeams"),
+    Callback = function(value)
+        Aimbot.updateSetting("ignoreTeams", value)
+    end
+})
+
+-- Раздел биндов
+Tabs.Aimbot:AddSection({
+    Title = "Привязки клавиш",
+    Content = "Назначьте клавиши для управления аимботом"
+})
+
+Tabs.Aimbot:AddButton({
+    Title = "Назначить клавишу аима",
+    Description = "Текущая клавиша: " .. Aimbot.getBindText("Aim"),
+    Callback = function()
+        Library:Notify({
+            Title = "Aimbot",
+            Content = "Нажмите клавишу для назначения...",
+            Duration = 3
+        })
+        Aimbot.startBind("Aim")
+    end
+})
+
+Tabs.Aimbot:AddButton({
+    Title = "Назначить клавишу удержания",
+    Description = "Текущая клавиша: " .. Aimbot.getBindText("Target"),
+    Callback = function()
+        Library:Notify({
+            Title = "Aimbot",
+            Content = "Нажмите клавишу для назначения...",
+            Duration = 3
+        })
+        Aimbot.startBind("Target")
+    end
+})
+
+Tabs.Aimbot:AddButton({
+    Title = "Сбросить бинды",
+    Description = "Вернуть настройки клавиш по умолчанию",
+    Callback = function()
+        Aimbot.resetBinds()
+        Library:Notify({
+            Title = "Aimbot",
+            Content = "Бинды сброшены на значения по умолчанию",
+            Duration = 3
+        })
     end
 })
 
@@ -151,7 +287,11 @@ Tabs.Visual:AddColorpicker("BoxColor", {
     Title = "Цвет рамок",
     Default = ESP.getSetting("BoxColor"),
     Callback = function(value)
-        ESP.updateColor("BoxColor", value)
+        if ESP.updateColor then
+            ESP.updateColor("BoxColor", value)
+        else
+            ESP.updateSetting("BoxColor", value)
+        end
     end
 })
 
@@ -159,7 +299,11 @@ Tabs.Visual:AddColorpicker("TracerColor", {
     Title = "Цвет линий",
     Default = ESP.getSetting("TracerColor"),
     Callback = function(value)
-        ESP.updateColor("TracerColor", value)
+        if ESP.updateColor then
+            ESP.updateColor("TracerColor", value)
+        else
+            ESP.updateSetting("TracerColor", value)
+        end
     end
 })
 
@@ -167,202 +311,106 @@ Tabs.Visual:AddColorpicker("NameColor", {
     Title = "Цвет имен",
     Default = ESP.getSetting("NameColor"),
     Callback = function(value)
-        ESP.updateColor("NameColor", value)
+        if ESP.updateColor then
+            ESP.updateColor("NameColor", value)
+        else
+            ESP.updateSetting("NameColor", value)
+        end
     end
 })
 
 Tabs.Visual:AddColorpicker("MurdererColor", {
     Title = "Цвет Murderer",
-    Default = ESP.getSetting("MurdererColor") or Color3.fromRGB(255, 0, 0),
+    Default = Color3.fromRGB(255, 0, 0),
     Callback = function(value)
-        ESP.updateColor("MurdererColor", value)
+        if ESP.updateColor then
+            ESP.updateColor("MurdererColor", value)
+        end
     end
 })
 
 Tabs.Visual:AddColorpicker("SheriffColor", {
     Title = "Цвет Sheriff",
-    Default = ESP.getSetting("SheriffColor") or Color3.fromRGB(0, 100, 255),
+    Default = Color3.fromRGB(0, 100, 255),
     Callback = function(value)
-        ESP.updateColor("SheriffColor", value)
+        if ESP.updateColor then
+            ESP.updateColor("SheriffColor", value)
+        end
     end
 })
 
 Tabs.Visual:AddColorpicker("GunDropColor", {
     Title = "Цвет оружия",
-    Default = ESP.getSetting("GunDropColor") or Color3.fromRGB(0, 255, 0),
+    Default = Color3.fromRGB(0, 255, 0),
     Callback = function(value)
-        ESP.updateColor("GunDropColor", value)
+        if ESP.updateColor then
+            ESP.updateColor("GunDropColor", value)
+        end
     end
 })
 
--- Вкладка Aimbot (только если модуль загружен)
-if Aimbot then
-    -- Основные настройки аимбота
-    Tabs.Aimbot:AddSection("Основные настройки")
-    
-    Tabs.Aimbot:AddToggle("AimbotEnabled", {
-        Title = "Включить Aimbot",
-        Description = "Активировать систему аимбота",
-        Default = Aimbot.getSetting("Enabled"),
-        Callback = function(value)
-            Aimbot.updateSetting("Enabled", value)
-        end
-    })
-    
-    Tabs.Aimbot:AddToggle("showFovCircle", {
-        Title = "Показывать FOV круг",
-        Description = "Отображать круг поля зрения",
-        Default = Aimbot.getSetting("showFovCircle"),
-        Callback = function(value)
-            Aimbot.updateSetting("showFovCircle", value)
-        end
-    })
-    
-    Tabs.Aimbot:AddToggle("wallCheck", {
-        Title = "Проверка стен",
-        Description = "Игнорировать игроков за стенами",
-        Default = Aimbot.getSetting("wallCheck"),
-        Callback = function(value)
-            Aimbot.updateSetting("wallCheck", value)
-        end
-    })
-    
-    Tabs.Aimbot:AddToggle("fullTarget", {
-        Title = "Full Target",
-        Description = "Закреплять цель при выборе",
-        Default = Aimbot.getSetting("fullTarget"),
-        Callback = function(value)
-            Aimbot.updateSetting("fullTarget", value)
-        end
-    })
-    
-    Tabs.Aimbot:AddToggle("ignoreTeams", {
-        Title = "Игнорировать команды",
-        Description = "Не целиться в союзников",
-        Default = Aimbot.getSetting("ignoreTeams"),
-        Callback = function(value)
-            Aimbot.updateSetting("ignoreTeams", value)
-        end
-    })
-    
-    Tabs.Aimbot:AddToggle("holdPkmMode", {
-        Title = "Режим удержания",
-        Description = "Активировать аимбот только при удержании кнопки",
-        Default = Aimbot.getSetting("holdPkmMode"),
-        Callback = function(value)
-            Aimbot.updateSetting("holdPkmMode", value)
-        end
-    })
-    
-    -- Настройки аимбота
-    Tabs.Aimbot:AddSection("Параметры аимбота")
-    
-    Tabs.Aimbot:AddSlider("fovRadius", {
-        Title = "FOV Радиус",
-        Description = "Радиус поля зрения аимбота",
-        Default = Aimbot.getSetting("fovRadius"),
-        Min = 50,
-        Max = 600,
-        Rounding = 0,
-        Callback = function(value)
-            Aimbot.updateSetting("fovRadius", value)
-        end
-    })
-    
-    Tabs.Aimbot:AddSlider("smoothness", {
-        Title = "Плавность",
-        Description = "Плавность движения аимбота",
-        Default = Aimbot.getSetting("smoothness"),
-        Min = 0.05,
-        Max = 1,
-        Rounding = 2,
-        Callback = function(value)
-            Aimbot.updateSetting("smoothness", value)
-        end
-    })
-    
-    Tabs.Aimbot:AddSlider("maxDist", {
-        Title = "Макс. дистанция",
-        Description = "Максимальная дистанция аимбота",
-        Default = Aimbot.getSetting("maxDist"),
-        Min = 100,
-        Max = 5000,
-        Rounding = 0,
-        Callback = function(value)
-            Aimbot.updateSetting("maxDist", value)
-        end
-    })
-    
-    -- Выбор части тела
-    local partDisplayNames = {
-        Head = "Голова",
-        UpperTorso = "Грудь",
-        HumanoidRootPart = "Тело"
-    }
-    
-    Tabs.Aimbot:AddDropdown("targetPart", {
-        Title = "Целевая часть",
-        Description = "Часть тела для прицеливания",
-        Values = {"Head", "UpperTorso", "HumanoidRootPart"},
-        Default = Aimbot.getSetting("targetPart"),
-        Callback = function(value)
-            Aimbot.updateSetting("targetPart", value)
-        end
-    })
-    
-    -- Выбор метода аима
-    Tabs.Aimbot:AddDropdown("aimMethod", {
-        Title = "Метод аима",
-        Description = "Способ прицеливания",
-        Values = {"Auto", "Mouse", "Camera"},
-        Default = Aimbot.getSetting("aimMethod"),
-        Callback = function(value)
-            Aimbot.updateSetting("aimMethod", value)
-        end
-    })
-    
-    -- Настройки биндов
-    Tabs.Aimbot:AddSection("Настройки биндов")
-    
-    local keyOptions = {}
-    for _, key in pairs(Enum.KeyCode:GetEnumItems()) do
-        table.insert(keyOptions, key.Name)
+-- Цвета Aimbot
+Tabs.Visual:AddSection({
+    Title = "Цвета Aimbot",
+    Content = "Настройки отображения аимбота"
+})
+
+local fovColor = Color3.fromRGB(255, 255, 255)
+Tabs.Visual:AddColorpicker("FovCircleColor", {
+    Title = "Цвет FOV круга",
+    Default = fovColor,
+    Callback = function(value)
+        fovColor = value
     end
-    
-    Tabs.Aimbot:AddDropdown("AimKey", {
-        Title = "Клавиша аимбота",
-        Description = "Клавиша включения/выключения",
-        Values = keyOptions,
-        Default = Aimbot.getBinding("AimKey").Name,
-        Callback = function(value)
-            local keyCode = Enum.KeyCode[value]
-            if keyCode then
-                Aimbot.updateBinding("AimKey", keyCode)
-            end
+})
+
+-- Дополнительные визуальные настройки
+Tabs.Visual:AddSection({
+    Title = "Дополнительные настройки",
+    Content = "Дополнительные визуальные эффекты"
+})
+
+local extraSettings = {
+    OutlineEnabled = true,
+    ChamsEnabled = false,
+    GlowEffect = false
+}
+
+Tabs.Visual:AddToggle("OutlineEnabled", {
+    Title = "Outline эффект",
+    Description = "Добавляет контур к ESP",
+    Default = extraSettings.OutlineEnabled,
+    Callback = function(value)
+        extraSettings.OutlineEnabled = value
+        if ESP.updateSetting then
+            ESP.updateSetting("OutlineEnabled", value)
         end
-    })
-    
-    Tabs.Aimbot:AddDropdown("TargetKey", {
-        Title = "Клавиша прицеливания",
-        Description = "Клавиша удержания цели",
-        Values = {"MouseButton1", "MouseButton2", "MouseButton3"},
-        Default = Aimbot.getBinding("TargetKey").Name,
-        Callback = function(value)
-            local inputType = Enum.UserInputType[value]
-            if inputType then
-                Aimbot.updateBinding("TargetKey", inputType)
-            end
+    end
+})
+
+Tabs.Visual:AddToggle("ChamsEnabled", {
+    Title = "Chams эффект",
+    Description = "Заливка игроков цветом",
+    Default = extraSettings.ChamsEnabled,
+    Callback = function(value)
+        extraSettings.ChamsEnabled = value
+        if ESP.updateSetting then
+            ESP.updateSetting("ChamsEnabled", value)
         end
-    })
-    
-else
-    -- Если аимбот не загружен
-    Tabs.Aimbot:AddSection("Информация")
-    Tabs.Aimbot:AddParagraph({
-        Title = "Aimbot не загружен",
-        Content = "Модуль аимбота не был загружен или произошла ошибка."
-    })
-end
+    end
+})
+
+Tabs.Visual:AddToggle("GlowEffect", {
+    Title = "Glow эффект",
+    Description = "Свечение вокруг игроков",
+    Default = extraSettings.GlowEffect,
+    Callback = function(value)
+        extraSettings.GlowEffect = value
+        if ESP.updateSetting then
+            ESP.updateSetting("GlowEffect", value)
+        end
+    end
+})
 
 -- Вкладка Настройки
 SaveManager:SetLibrary(Library)
@@ -374,24 +422,125 @@ SaveManager:SetFolder("MM2ESPHub/settings")
 InterfaceManager:BuildInterfaceSection(Tabs.Settings)
 SaveManager:BuildConfigSection(Tabs.Settings)
 
+-- Функция для сохранения всех настроек
+local function saveAllSettings()
+    local settingsTable = {
+        ESP = ESP.saveSettings and ESP.saveSettings() or nil,
+        Aimbot = Aimbot.saveSettings and Aimbot.saveSettings() or nil,
+        Visual = {
+            fovColor = fovColor,
+            extraSettings = extraSettings
+        }
+    }
+    
+    return settingsTable
+end
+
+-- Функция для загрузки всех настроек
+local function loadAllSettings(settingsTable)
+    if not settingsTable then return end
+    
+    -- Загружаем настройки ESP
+    if settingsTable.ESP and ESP.loadSettings then
+        ESP.loadSettings(settingsTable.ESP)
+    end
+    
+    -- Загружаем настройки Aimbot
+    if settingsTable.Aimbot and Aimbot.loadSettings then
+        Aimbot.loadSettings(settingsTable.Aimbot)
+    end
+    
+    -- Загружаем визуальные настройки
+    if settingsTable.Visual then
+        fovColor = settingsTable.Visual.fovColor or Color3.fromRGB(255, 255, 255)
+        if settingsTable.Visual.extraSettings then
+            for key, value in pairs(settingsTable.Visual.extraSettings) do
+                extraSettings[key] = value
+            end
+        end
+    end
+end
+
+-- Загружаем настройки при старте
+task.spawn(function()
+    wait(1)
+    local success, savedSettings = pcall(function()
+        return SaveManager:Load("AllSettings")
+    end)
+    
+    if success and savedSettings then
+        loadAllSettings(savedSettings)
+        print("✅ Все настройки загружены")
+    end
+end)
+
+-- Сохраняем настройки при изменении
+local function saveSettingsOnChange()
+    SaveManager:Save("AllSettings", saveAllSettings())
+end
+
+-- Подписываемся на изменения
+for _, tab in pairs(Tabs) do
+    if tab then
+        -- Добавляем задержку для экономии ресурсов
+        local debounce = false
+        tab.Tab.MouseButton1Click:Connect(function()
+            if not debounce then
+                debounce = true
+                saveSettingsOnChange()
+                wait(0.5)
+                debounce = false
+            end
+        end)
+    end
+end
+
 -- Выбираем первую вкладку
 Window:SelectTab(1)
 
--- Загружаем сохраненные настройки
-SaveManager:LoadAutoloadConfig()
-
--- Уведомление о загрузке
+-- Уведомление
 Library:Notify({
-    Title = "MM2 ESP Hub",
-    Content = "ESP и Aimbot успешно загружены!",
-    SubContent = "Нажми INSERT для скрытия меню",
+    Title = "MM2 ESP + Aimbot Hub",
+    Content = "Меню успешно загружено!",
+    SubContent = "Нажми INSERT для скрытия меню\n" ..
+                "Нажми " .. Aimbot.getBindText("Aim") .. " для включения Aimbot",
     Duration = 5
 })
 
-print("🎮 MM2 ESP Hub успешно загружен!")
+print("🎮 MM2 ESP + Aimbot Hub успешно загружен!")
 print("📌 Нажми INSERT для скрытия/показа интерфейса")
+print("🎯 Aimbot клавиша: " .. Aimbot.getBindText("Aim"))
+print("🎯 Target клавиша: " .. Aimbot.getBindText("Target"))
 
 -- Инициализируем ESP если есть функция init
 if ESP.init then
     ESP.init()
 end
+
+-- Функция для безопасного отключения скрипта
+local function cleanup()
+    if Aimbot.cleanup then
+        Aimbot.cleanup()
+    end
+    
+    -- Сохраняем настройки перед выходом
+    saveSettingsOnChange()
+end
+
+-- Обработка выхода из игры
+game:GetService("Players").LocalPlayer:GetPropertyChangedSignal("UserId"):Connect(function()
+    cleanup()
+end)
+
+-- Обработка закрытия
+game:BindToClose(function()
+    cleanup()
+end)
+
+-- Возвращаем объекты для внешнего доступа
+return {
+    Window = Window,
+    ESP = ESP,
+    Aimbot = Aimbot,
+    cleanup = cleanup
+}

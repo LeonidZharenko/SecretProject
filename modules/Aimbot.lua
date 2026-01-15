@@ -7,7 +7,7 @@ local Camera = workspace.CurrentCamera
 
 local Aimbot = {}
 
--- ПОЛНЫЙ ФИКС для работы с мышью в любом executor'е
+-- ПОЛНЫЙ ФИКС для работы с мышью
 local mouseMoveFunc
 if mousemoverel then
     mouseMoveFunc = mousemoverel
@@ -51,37 +51,59 @@ end
 
 function Aimbot.updateSetting(key, value)
     SETTINGS[key] = value
+    print("[Aimbot] Настройка обновлена: " .. key .. " = " .. tostring(value))
 end
 
 function Aimbot.toggle()
     SETTINGS.Enabled = not SETTINGS.Enabled
+    print("[Aimbot] " .. (SETTINGS.Enabled and "Включен" or "Выключен"))
     return SETTINGS.Enabled
-end
-
-function Aimbot.setBind(bindType, input)
-    if bindType == "Aim" then
-        if input.KeyCode ~= Enum.KeyCode.Unknown then
-            SETTINGS.AimKey = input.KeyCode
-        elseif input.UserInputType then
-            SETTINGS.AimKey = input.UserInputType
-        end
-    elseif bindType == "Target" then
-        if input.KeyCode ~= Enum.KeyCode.Unknown then
-            SETTINGS.TargetKey = input.KeyCode
-        elseif input.UserInputType then
-            SETTINGS.TargetKey = input.UserInputType
-        end
-    end
 end
 
 function Aimbot.getBindText(bindType)
     if bindType == "Aim" then
-        return SETTINGS.AimKey.Name or "Insert"
+        if type(SETTINGS.AimKey) == "userdata" then
+            return SETTINGS.AimKey.Name or "Insert"
+        end
+        return "Insert"
     elseif bindType == "Target" then
-        return SETTINGS.TargetKey == Enum.UserInputType.MouseButton2 and "RMB" or 
-               (SETTINGS.TargetKey.Name or "RMB")
+        if SETTINGS.TargetKey == Enum.UserInputType.MouseButton2 then
+            return "RMB"
+        elseif type(SETTINGS.TargetKey) == "userdata" then
+            return SETTINGS.TargetKey.Name or "RMB"
+        end
+        return "RMB"
     end
     return ""
+end
+
+function Aimbot.startBind(bindType)
+    waitingForBind = bindType
+    print("[Aimbot] Ожидание клавиши для: " .. bindType)
+end
+
+function Aimbot.resetBinds()
+    SETTINGS.AimKey = Enum.KeyCode.Insert
+    SETTINGS.TargetKey = Enum.UserInputType.MouseButton2
+    print("[Aimbot] Бинды сброшены")
+end
+
+-- Функции для сохранения/загрузки
+function Aimbot.saveSettings()
+    local saved = {}
+    for key, value in pairs(SETTINGS) do
+        saved[key] = value
+    end
+    return saved
+end
+
+function Aimbot.loadSettings(savedSettings)
+    if not savedSettings then return end
+    for key, value in pairs(savedSettings) do
+        if SETTINGS[key] ~= nil then
+            SETTINGS[key] = value
+        end
+    end
 end
 
 -- Вспомогательные функции
@@ -140,6 +162,19 @@ local function isValidTarget(player)
     return true
 end
 
+local function isInFov(player)
+    if not player or not player.Character then return false end
+    
+    local part = getTargetPart(player)
+    if not part then return false end
+    
+    local partScreen, onScreen = Camera:WorldToViewportPoint(part.Position)
+    local screenCenter = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+    local screenDist = (Vector2.new(partScreen.X, partScreen.Y) - screenCenter).Magnitude
+    
+    return screenDist <= SETTINGS.fovRadius and onScreen
+end
+
 local function findNearestEnemy()
     local screenCenter = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
     local myChar = LocalPlayer.Character
@@ -151,58 +186,56 @@ local function findNearestEnemy()
     
     -- Full Target проверка
     if SETTINGS.fullTarget and lockedTarget then
-        if isValidTarget(lockedTarget) then
-            local part = getTargetPart(lockedTarget)
-            if part then
-                local screenPos, onScreen = Camera:WorldToViewportPoint(part.Position)
-                if onScreen then
-                    local screenDist = (Vector2.new(screenPos.X, screenPos.Y) - screenCenter).Magnitude
-                    if screenDist <= SETTINGS.fovRadius then
-                        if SETTINGS.wallCheck then
-                            local rayParams = RaycastParams.new()
-                            rayParams.FilterDescendantsInstances = {LocalPlayer.Character}
-                            rayParams.FilterType = Enum.RaycastFilterType.Exclude
-                            local ray = workspace:Raycast(Camera.CFrame.Position, (part.Position - Camera.CFrame.Position).Unit * 1000, rayParams)
-                            if not ray or ray.Instance:IsDescendantOf(lockedTarget.Character) then
-                                return lockedTarget
-                            end
-                        else
-                            return lockedTarget
-                        end
+        if isValidTarget(lockedTarget) and isInFov(lockedTarget) then
+            if SETTINGS.wallCheck then
+                local part = getTargetPart(lockedTarget)
+                if part then
+                    local rayParams = RaycastParams.new()
+                    rayParams.FilterDescendantsInstances = {LocalPlayer.Character}
+                    rayParams.FilterType = Enum.RaycastFilterType.Exclude
+                    rayParams.IgnoreWater = true
+                    
+                    local rayResult = workspace:Raycast(Camera.CFrame.Position, (part.Position - Camera.CFrame.Position).Unit * 1000, rayParams)
+                    if rayResult and rayResult.Instance:IsDescendantOf(lockedTarget.Character) then
+                        return lockedTarget
                     end
                 end
+            else
+                return lockedTarget
             end
         end
         lockedTarget = nil
     end
     
-    -- Поиск новой цели
+    -- Обычный поиск
     local nearest = nil
     local nearestDist = math.huge
     
     for _, player in ipairs(Players:GetPlayers()) do
         if isValidTarget(player) then
+            local char = player.Character
             local part = getTargetPart(player)
             if part then
-                local screenPos, onScreen = Camera:WorldToViewportPoint(part.Position)
-                if onScreen then
-                    local screenDist = (Vector2.new(screenPos.X, screenPos.Y) - screenCenter).Magnitude
-                    if screenDist <= SETTINGS.fovRadius then
-                        local worldDist = (myPos - part.Position).Magnitude
-                        if worldDist < nearestDist and worldDist < 1000 then
-                            if SETTINGS.wallCheck then
-                                local rayParams = RaycastParams.new()
-                                rayParams.FilterDescendantsInstances = {LocalPlayer.Character}
-                                rayParams.FilterType = Enum.RaycastFilterType.Exclude
-                                local ray = workspace:Raycast(Camera.CFrame.Position, (part.Position - Camera.CFrame.Position).Unit * 1000, rayParams)
-                                if not ray or ray.Instance:IsDescendantOf(player.Character) then
-                                    nearestDist = worldDist
-                                    nearest = player
-                                end
-                            else
-                                nearestDist = worldDist
-                                nearest = player
-                            end
+                local partScreen, onScreen = Camera:WorldToViewportPoint(part.Position)
+                local screenDist = (Vector2.new(partScreen.X, partScreen.Y) - screenCenter).Magnitude
+                
+                if screenDist <= SETTINGS.fovRadius and onScreen then
+                    local worldDist = (myPos - part.Position).Magnitude
+                    if worldDist < nearestDist and worldDist < 1000 then
+                        local canSee = true
+                        if SETTINGS.wallCheck then
+                            local rayParams = RaycastParams.new()
+                            rayParams.FilterType = Enum.RaycastFilterType.Exclude
+                            rayParams.FilterDescendantsInstances = {LocalPlayer.Character}
+                            rayParams.IgnoreWater = true
+                            
+                            local rayResult = workspace:Raycast(Camera.CFrame.Position, (part.Position - Camera.CFrame.Position).Unit * 1000, rayParams)
+                            canSee = rayResult and rayResult.Instance:IsDescendantOf(char)
+                        end
+                        
+                        if canSee then
+                            nearestDist = worldDist
+                            nearest = player
                         end
                     end
                 end
@@ -210,11 +243,11 @@ local function findNearestEnemy()
         end
     end
     
-    if nearest and SETTINGS.fullTarget then
+    if SETTINGS.fullTarget and nearest then
         lockedTarget = nearest
     end
     
-    return nearest
+    return nearest or lockedTarget
 end
 
 -- Методы аима
@@ -223,29 +256,46 @@ local function aimWithMouse(targetPos)
     if not onScreen then return end
     
     local screenCenter = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
-    local targetPos2D = Vector2.new(screenPos.X, screenPos.Y)
-    local delta = targetPos2D - screenCenter
+    local targetScreenPos = Vector2.new(screenPos.X, screenPos.Y)
     
+    local delta = targetScreenPos - screenCenter
     delta = delta * SETTINGS.smoothness
     mouseMoveFunc(delta.X, delta.Y)
 end
 
 local function aimWithCamera(targetPos)
+    local direction = (targetPos - Camera.CFrame.Position).Unit
     local targetCF = CFrame.lookAt(Camera.CFrame.Position, targetPos)
     Camera.CFrame = Camera.CFrame:Lerp(targetCF, SETTINGS.smoothness)
 end
 
--- Обработка ввода
+-- Обработка ввода (ПОЛНЫЙ ФИКС для всех клавиш)
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if waitingForBind then
-        Aimbot.setBind(waitingForBind, input)
-        waitingForBind = nil
+        local newBind = nil
+        if input.UserInputType == Enum.UserInputType.Keyboard then
+            newBind = input.KeyCode
+        elseif input.UserInputType == Enum.UserInputType.MouseButton1 or 
+               input.UserInputType == Enum.UserInputType.MouseButton2 then
+            newBind = input.UserInputType
+        end
+        
+        if newBind then
+            if waitingForBind == "Aim" then
+                SETTINGS.AimKey = newBind
+                print("[Aimbot] Aim key установлен: " .. (input.KeyCode and input.KeyCode.Name or "Mouse"))
+            elseif waitingForBind == "Target" then
+                SETTINGS.TargetKey = newBind
+                print("[Aimbot] Target key установлен: " .. (input.KeyCode and input.KeyCode.Name or "Mouse"))
+            end
+            waitingForBind = nil
+        end
         return
     end
     
     if gameProcessed then return end
     
-    -- Проверка Aim Key
+    -- Проверка Aim Key (работает для ВСЕХ клавиш)
     local isAimKey = false
     if input.KeyCode ~= Enum.KeyCode.Unknown then
         if input.KeyCode == SETTINGS.AimKey then
@@ -257,6 +307,7 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     
     if isAimKey then
         SETTINGS.Enabled = not SETTINGS.Enabled
+        print("[Aimbot] " .. (SETTINGS.Enabled and "ВКЛЮЧЕН" or "ВЫКЛЮЧЕН") .. " на " .. Aimbot.getBindText("Aim"))
     end
     
     -- Проверка Target Key
@@ -289,8 +340,8 @@ UserInputService.InputEnded:Connect(function(input)
     end
 end)
 
--- Основной цикл
-RunService.Heartbeat:Connect(function()
+-- Основной цикл Aimbot
+local aimbotConnection = RunService.Heartbeat:Connect(function()
     updateFovCircle()
     
     local active = SETTINGS.Enabled and (not SETTINGS.holdPkmMode or isTargetHeld)
@@ -314,40 +365,40 @@ RunService.Heartbeat:Connect(function()
     end
 end)
 
--- Функция для начала перебинда
-function Aimbot.startBind(bindType)
-    waitingForBind = bindType
-end
-
--- Функция для сброса биндов
-function Aimbot.resetBinds()
-    SETTINGS.AimKey = Enum.KeyCode.Insert
-    SETTINGS.TargetKey = Enum.UserInputType.MouseButton2
-end
-
 -- Функция очистки
 function Aimbot.cleanup()
+    if aimbotConnection then
+        aimbotConnection:Disconnect()
+        aimbotConnection = nil
+    end
+    
     if fovCircle then
         fovCircle:Remove()
         fovCircle = nil
     end
 end
 
--- Сохранение настроек
-function Aimbot.saveSettings()
-    return SETTINGS
+-- Функция для получения всех настроек (для GUI)
+function Aimbot.getAllSettings()
+    local settings = {}
+    for key, value in pairs(SETTINGS) do
+        settings[key] = value
+    end
+    return settings
 end
 
--- Загрузка настроек
-function Aimbot.loadSettings(savedSettings)
-    if savedSettings then
-        for key, value in pairs(savedSettings) do
-            if SETTINGS[key] ~= nil then
-                SETTINGS[key] = value
-            end
-        end
+-- Функция для обновления цвета FOV круга
+function Aimbot.updateFovColor(color)
+    if fovCircle then
+        fovCircle.Color = color
     end
 end
 
+-- Инициализация
 print("✅ Aimbot модуль загружен")
+print("🎯 Aim Key: " .. Aimbot.getBindText("Aim"))
+print("🎯 Target Key: " .. Aimbot.getBindText("Target"))
+print("⚙️ Метод: " .. SETTINGS.aimMethod)
+print("🎯 Часть: " .. SETTINGS.targetPart)
+
 return Aimbot

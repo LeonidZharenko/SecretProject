@@ -1,216 +1,213 @@
 -- modules/ui.lua
-return function(ESP, Aimbot)
+return function(ESPModule, AimbotModule)
+    -- Загружаем Fluent библиотеку
     local Fluent = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/Source.lua"))()
     local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua"))()
     local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
 
-    -- Создаем главное окно
+    -- Создаем окно
     local Window = Fluent:CreateWindow({
         Title = "MM2 ESP Hub | v2.0",
         SubTitle = "by YourName",
         TabWidth = 160,
         Size = UDim2.fromOffset(580, 460),
-        Acrylic = true, -- Размытый фон
+        Acrylic = true,
         Theme = "Dark",
         MinimizeKey = Enum.KeyCode.Insert
     })
 
-    -- Вкладка ESP
+    -- ==================== ВКЛАДКА ESP ====================
     local ESPTab = Window:AddTab({
         Title = "ESP",
         Icon = "eye"
     })
 
-    -- Секция основных настроек
+    -- Секция: Основные настройки ESP
     ESPTab:AddSection("Основные настройки")
     
     ESPTab:AddToggle("ESPEnabled", {
         Title = "Включить ESP",
         Description = "Активировать всю систему ESP",
-        Default = ESP.getSetting("Enabled"),
+        Default = ESPModule.getSetting("ESPEnabled"),
         Callback = function(value)
-            ESP.updateSetting("Enabled", value)
+            ESPModule.updateSetting("ESPEnabled", value)
         end
     })
-
-    ESPTab:AddToggle("BoxESP", {
+    
+    ESPTab:AddToggle("BoxEnabled", {
         Title = "Box ESP",
         Description = "Рамки вокруг игроков",
-        Default = ESP.getSetting("Box"),
+        Default = ESPModule.getSetting("BoxEnabled"),
         Callback = function(value)
-            ESP.updateSetting("Box", value)
+            ESPModule.updateSetting("BoxEnabled", value)
         end
     })
-
-    ESPTab:AddToggle("TracerESP", {
+    
+    ESPTab:AddToggle("TracerEnabled", {
         Title = "Tracers",
         Description = "Линии от центра экрана к игрокам",
-        Default = ESP.getSetting("Tracer"),
+        Default = ESPModule.getSetting("TracerEnabled"),
         Callback = function(value)
-            ESP.updateSetting("Tracer", value)
+            ESPModule.updateSetting("TracerEnabled", value)
         end
     })
-
-    ESPTab:AddToggle("NamesESP", {
+    
+    ESPTab:AddToggle("NameEnabled", {
         Title = "Имена игроков",
         Description = "Отображать ники над игроками",
-        Default = ESP.getSetting("Names"),
+        Default = ESPModule.getSetting("NameEnabled"),
         Callback = function(value)
-            ESP.updateSetting("Names", value)
+            ESPModule.updateSetting("NameEnabled", value)
         end
     })
-
-    ESPTab:AddToggle("DistanceESP", {
-        Title = "Дистанция",
+    
+    ESPTab:AddToggle("ShowDistance", {
+        Title = "Показывать дистанцию",
         Description = "Показывать расстояние до игроков",
-        Default = ESP.getSetting("ShowDistance"),
+        Default = ESPModule.getSetting("ShowDistance"),
         Callback = function(value)
-            ESP.updateSetting("ShowDistance", value)
+            ESPModule.updateSetting("ShowDistance", value)
         end
     })
-
-    ESPTab:AddToggle("TeamCheckESP", {
+    
+    ESPTab:AddToggle("TeamCheck", {
         Title = "Team Check",
         Description = "Игнорировать союзников",
-        Default = ESP.getSetting("TeamCheck"),
+        Default = ESPModule.getSetting("TeamCheck"),
         Callback = function(value)
-            ESP.updateSetting("TeamCheck", value)
+            ESPModule.updateSetting("TeamCheck", value)
         end
     })
 
-    -- Секция дистанции
+    -- Секция: MM2 Роли
+    ESPTab:AddSection("MM2 Роли")
+    
+    ESPTab:AddToggle("MM2RoleESP", {
+        Title = "Определять роли",
+        Description = "Показывать Murderer/Sheriff",
+        Default = ESPModule.getSetting("MM2RoleESP"),
+        Callback = function(value)
+            ESPModule.updateSetting("MM2RoleESP", value)
+        end
+    })
+
+    -- Секция: GunDrop ESP
+    ESPTab:AddSection("GunDrop ESP")
+    
+    ESPTab:AddToggle("WeaponESP", {
+        Title = "ESP оружия",
+        Description = "Показывать оружие на земле",
+        Default = ESPModule.getSetting("WeaponESP"),
+        Callback = function(value)
+            ESPModule.updateSetting("WeaponESP", value)
+        end
+    })
+
+    -- Секция: Дистанция
     ESPTab:AddSection("Дистанция рендера")
     
-    ESPTab:AddSlider("MaxDistance", {
+    ESPTab:AddSlider("MaxRenderDistance", {
         Title = "Макс. дистанция",
         Description = "Максимальное расстояние отрисовки",
-        Default = ESP.getSetting("MaxDistance"),
+        Default = ESPModule.getSetting("MaxRenderDistance"),
         Min = 500,
         Max = 10000,
         Rounding = 0,
         Callback = function(value)
-            ESP.updateSetting("MaxDistance", value)
+            ESPModule.updateSetting("MaxRenderDistance", value)
         end
     })
 
-    -- Секция MM2 Ролей
-    ESPTab:AddSection("MM2 Роли")
-    
-    ESPTab:AddToggle("ShowRoles", {
-        Title = "Показывать роли",
-        Description = "Определять Murderer/Sheriff",
-        Default = ESP.getSetting("ShowRoles"),
-        Callback = function(value)
-            ESP.updateSetting("ShowRoles", value)
-        end
-    })
-
-    ESPTab:AddColorpicker("MurdererColor", {
-        Title = "Цвет Murderer",
-        Default = ESP.getSetting("MurdererColor"),
-        Callback = function(value)
-            ESP.updateSetting("MurdererColor", value)
-        end
-    })
-
-    ESPTab:AddColorpicker("SheriffColor", {
-        Title = "Цвет Sheriff",
-        Default = ESP.getSetting("SheriffColor"),
-        Callback = function(value)
-            ESP.updateSetting("SheriffColor", value)
-        end
-    })
-
-    -- Секция GunDrop ESP
-    ESPTab:AddSection("GunDrop ESP")
-    
-    ESPTab:AddToggle("GunDropESP", {
-        Title = "ESP оружия",
-        Description = "Показывать оружие на земле",
-        Default = ESP.getSetting("GunDropESP"),
-        Callback = function(value)
-            ESP.updateSetting("GunDropESP", value)
-        end
-    })
-
-    ESPTab:AddColorpicker("GunDropColor", {
-        Title = "Цвет оружия",
-        Default = ESP.getSetting("GunDropColor"),
-        Callback = function(value)
-            ESP.updateSetting("GunDropColor", value)
-        end
-    })
-
-    -- Вкладка Aimbot
-    local AimbotTab = Window:AddTab({
-        Title = "Aimbot",
-        Icon = "target"
-    })
-
-    AimbotTab:AddSection("Настройки аимбота")
-    
-    if Aimbot and Aimbot.Settings then
-        AimbotTab:AddToggle("AimbotEnabled", {
-            Title = "Включить Aimbot",
-            Default = Aimbot.Settings.Enabled or false,
-            Callback = function(value)
-                if Aimbot.updateSetting then
-                    Aimbot.updateSetting("Enabled", value)
-                end
-            end
-        })
-
-        -- Добавляем другие настройки аимбота
-        AimbotTab:AddSlider("AimbotFOV", {
-            Title = "FOV",
-            Description = "Поле зрения аимбота",
-            Default = Aimbot.Settings.FOV or 100,
-            Min = 10,
-            Max = 360,
-            Rounding = 0,
-            Callback = function(value)
-                if Aimbot.updateSetting then
-                    Aimbot.updateSetting("FOV", value)
-                end
-            end
-        })
-    end
-
-    -- Вкладка Визуал
+    -- ==================== ВКЛАДКА ВИЗУАЛ ====================
     local VisualTab = Window:AddTab({
         Title = "Визуал",
         Icon = "palette"
     })
 
+    -- Секция: Цвета ESP
     VisualTab:AddSection("Цвета ESP")
     
     VisualTab:AddColorpicker("BoxColor", {
         Title = "Цвет рамок",
-        Default = ESP.getSetting("BoxColor"),
+        Default = ESPModule.getSetting("BoxColor"),
         Callback = function(value)
-            ESP.updateSetting("BoxColor", value)
+            ESPModule.updateColor("BoxColor", value)
         end
     })
-
+    
     VisualTab:AddColorpicker("TracerColor", {
         Title = "Цвет линий",
-        Default = ESP.getSetting("TracerColor"),
+        Default = ESPModule.getSetting("TracerColor"),
         Callback = function(value)
-            ESP.updateSetting("TracerColor", value)
+            ESPModule.updateColor("TracerColor", value)
         end
     })
-
+    
     VisualTab:AddColorpicker("NameColor", {
         Title = "Цвет имен",
-        Default = ESP.getSetting("NameColor"),
+        Default = ESPModule.getSetting("NameColor"),
         Callback = function(value)
-            ESP.updateSetting("NameColor", value)
+            ESPModule.updateColor("NameColor", value)
         end
     })
 
-    -- Вкладка Информация
+    -- Секция: Настройки отображения
+    VisualTab:AddSection("Настройки отображения")
+    
+    VisualTab:AddDropdown("TracerFrom", {
+        Title = "Начало линий",
+        Description = "Откуда идут трассеры",
+        Default = ESPModule.getSetting("TracerFrom"),
+        Values = {"Bottom", "Center", "Top"},
+        Callback = function(value)
+            ESPModule.updateSetting("TracerFrom", value)
+        end
+    })
+    
+    VisualTab:AddSlider("ReinitInterval", {
+        Title = "Интервал обновления",
+        Description = "Частота обновления ESP (сек)",
+        Default = ESPModule.getSetting("ReinitInterval"),
+        Min = 0.5,
+        Max = 5,
+        Rounding = 1,
+        Callback = function(value)
+            ESPModule.updateSetting("ReinitInterval", value)
+        end
+    })
+
+    -- ==================== ВКЛАДКА АИМБОТ ====================
+    local AimbotTab = Window:AddTab({
+        Title = "Aimbot",
+        Icon = "target"
+    })
+
+    if AimbotModule then
+        AimbotTab:AddSection("Основные настройки")
+        
+        AimbotTab:AddToggle("AimbotEnabled", {
+            Title = "Включить Aimbot",
+            Description = "Активировать систему аимбота",
+            Default = AimbotModule.getSetting and AimbotModule.getSetting("Enabled") or false,
+            Callback = function(value)
+                if AimbotModule.updateSetting then
+                    AimbotModule.updateSetting("Enabled", value)
+                end
+            end
+        })
+        
+        -- Добавьте другие настройки аимбота здесь
+    else
+        AimbotTab:AddSection("Информация")
+        AimbotTab:AddParagraph({
+            Title = "Aimbot не загружен",
+            Content = "Модуль аимбота не был загружен или произошла ошибка."
+        })
+    end
+
+    -- ==================== ВКЛАДКА ИНФО ====================
     local InfoTab = Window:AddTab({
-        Title = "Инфо",
+        Title = "Информация",
         Icon = "info"
     })
 
@@ -218,10 +215,10 @@ return function(ESP, Aimbot)
     
     InfoTab:AddParagraph({
         Title = "MM2 ESP Hub",
-        Content = "Оптимизированный ESP и Aimbot для Murder Mystery 2\n\nФункции:\n• ESP игроков с Box, Tracer, Names\n• Определение ролей (Murderer/Sheriff)\n• GunDrop ESP (оптимизированный)\n• Aimbot с настройками\n• Красивый интерфейс\n\nУправление:\n• INSERT - скрыть/показать интерфейс\n• Настройки сохраняются автоматически"
+        Content = "Оптимизированный ESP для Murder Mystery 2\n\nФункции:\n• ESP игроков с Box, Tracer, Names\n• Определение ролей (Murderer/Sheriff)\n• GunDrop ESP (оптимизированный)\n• Aimbot с настройками\n• Красивый интерфейс\n\nУправление:\n• INSERT - скрыть/показать интерфейс\n• Настройки сохраняются автоматически"
     })
 
-    InfoTab:AddSection("Горячие клавиши")
+    InfoTab:AddSection("Управление")
     
     InfoTab:AddKeybind("ToggleKeybind", {
         Title = "Переключить UI",
@@ -231,13 +228,27 @@ return function(ESP, Aimbot)
             Window:Minimize()
         end
     })
+    
+    InfoTab:AddButton({
+        Title = "Перезагрузить ESP",
+        Description = "Перезагрузить систему ESP",
+        Callback = function()
+            -- Можно добавить функцию перезагрузки
+            Fluent:Notify({
+                Title = "MM2 ESP",
+                Content = "ESP перезагружен!",
+                SubContent = "Все настройки сохранены",
+                Duration = 3
+            })
+        end
+    })
 
     -- Включаем сохранение настроек
     SaveManager:SetLibrary(Fluent)
     InterfaceManager:SetLibrary(Fluent)
     
     SaveManager:IgnoreThemeSettings()
-    SaveManager:SetIgnoreIndexes({"MenuKeybind"})
+    SaveManager:SetIgnoreIndexes({"ToggleKeybind"})
     
     InterfaceManager:BuildInterfaceSection(InfoTab)
     SaveManager:BuildConfigSection(InfoTab)
@@ -249,9 +260,12 @@ return function(ESP, Aimbot)
     Fluent:Notify({
         Title = "MM2 ESP Hub",
         Content = "Скрипт успешно загружен!",
+        SubContent = "Нажми INSERT для скрытия/показа интерфейса",
         Duration = 5
     })
 
     print("🎮 MM2 ESP Hub загружен!")
     print("📌 Нажми INSERT для скрытия/показа интерфейса")
+    
+    return Window
 end

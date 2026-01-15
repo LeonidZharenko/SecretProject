@@ -600,28 +600,38 @@ local function saveAllSettings()
     return settingsTable
 end
 
--- Функция для загрузки всех настроек
+-- Функция для загрузки всех настроек (ИСПРАВЛЕНА)
 local function loadAllSettings(settingsTable)
-    if not settingsTable then return end
+    -- Проверяем, что settingsTable является таблицей
+    if type(settingsTable) ~= "table" then
+        warn("⚠️ loadAllSettings: settingsTable не является таблицей, используется настройки по умолчанию")
+        return
+    end
     
-    -- Загружаем настройки ESP
-    if settingsTable.ESP and ESP.updateSetting then
+    -- Загружаем настройки ESP (с проверкой)
+    if type(settingsTable.ESP) == "table" and ESP.updateSetting then
         for key, value in pairs(settingsTable.ESP) do
             ESP.updateSetting(key, value)
         end
+    else
+        warn("⚠️ loadAllSettings: настройки ESP отсутствуют или некорректны")
     end
     
-    -- Загружаем настройки Aimbot
-    if settingsTable.Aimbot and Aimbot.updateSetting then
+    -- Загружаем настройки Aimbot (с проверкой)
+    if type(settingsTable.Aimbot) == "table" and Aimbot.updateSetting then
         for key, value in pairs(settingsTable.Aimbot) do
             Aimbot.updateSetting(key, value)
         end
+    else
+        warn("⚠️ loadAllSettings: настройки Aimbot отсутствуют или некорректны")
     end
     
-    -- Загружаем визуальные настройки
-    if settingsTable.Visual then
-        fovColor = settingsTable.Visual.fovColor or Color3.fromRGB(255, 255, 255)
-        if settingsTable.Visual.extraSettings then
+    -- Загружаем визуальные настройки (с проверкой)
+    if type(settingsTable.Visual) == "table" then
+        if settingsTable.Visual.fovColor then
+            fovColor = settingsTable.Visual.fovColor
+        end
+        if type(settingsTable.Visual.extraSettings) == "table" then
             for key, value in pairs(settingsTable.Visual.extraSettings) do
                 extraSettings[key] = value
             end
@@ -629,7 +639,7 @@ local function loadAllSettings(settingsTable)
     end
 end
 
--- Загружаем настройки при старте
+-- Загружаем настройки при старте (ИСПРАВЛЕНО)
 task.spawn(function()
     wait(1)
     local success, savedSettings = pcall(function()
@@ -637,12 +647,19 @@ task.spawn(function()
     end)
     
     if success and savedSettings then
-        loadAllSettings(savedSettings)
-        Library:Notify({
-            Title = "Настройки",
-            Content = "Все настройки успешно загружены",
-            Duration = 3
-        })
+        -- Проверяем тип загруженных настроек
+        if type(savedSettings) == "table" then
+            loadAllSettings(savedSettings)
+            Library:Notify({
+                Title = "Настройки",
+                Content = "Все настройки успешно загружены",
+                Duration = 3
+            })
+        else
+            warn("⚠️ Загруженные настройки не являются таблицей, используется настройки по умолчанию")
+        end
+    else
+        warn("⚠️ Не удалось загрузить настройки: " .. (savedSettings or "неизвестная ошибка"))
     end
 end)
 
@@ -677,25 +694,35 @@ local function cleanup()
         Aimbot.cleanup()
     end
     
-    -- Сохраняем настройки
+    -- Сохраняем настройки (с проверкой ошибок)
     local success = pcall(function()
-        SaveManager:Save("AllSettings", saveAllSettings())
+        local settingsToSave = saveAllSettings()
+        if type(settingsToSave) == "table" then
+            SaveManager:Save("AllSettings", settingsToSave)
+            print("✅ Настройки сохранены")
+        else
+            warn("⚠️ Не удалось сформировать таблицу настроек для сохранения")
+        end
     end)
     
-    if success then
-        print("✅ Настройки сохранены")
+    if not success then
+        warn("⚠️ Ошибка при сохранении настроек")
     end
 end
 
--- Автосохранение каждые 30 секунд
+-- Автосохранение каждые 30 секунд (с проверкой)
 task.spawn(function()
     while true do
         wait(30)
         local success = pcall(function()
-            SaveManager:Save("AllSettings", saveAllSettings())
+            local settingsToSave = saveAllSettings()
+            if type(settingsToSave) == "table" then
+                SaveManager:Save("AllSettings", settingsToSave)
+                print("✅ Автосохранение настроек")
+            end
         end)
-        if success then
-            print("✅ Автосохранение настроек")
+        if not success then
+            print("⚠️ Ошибка автосохранения настроек")
         end
     end
 end)

@@ -1,4 +1,4 @@
--- modules/fly.lua - Классический Fly с фиксом инерции
+-- modules/fly.lua - Чистый Fly (куда смотришь - туда летишь)
 local FlyController = {}
 FlyController.__index = FlyController
 
@@ -18,9 +18,7 @@ local activeKeys = {
     forward = false,
     backward = false,
     left = false,
-    right = false,
-    up = false,
-    down = false
+    right = false
 }
 
 -- Character references
@@ -65,7 +63,7 @@ local function createFlyObjects()
     bodyGyro.Parent = rootPart
 end
 
--- Function to update fly movement (классический полет)
+-- Function to update fly movement
 local function updateFly()
     if not flying or not bodyVelocity or not bodyGyro then return end
     
@@ -76,87 +74,41 @@ local function updateFly()
     -- Основные векторы камеры
     local lookVector = cameraCFrame.LookVector  -- Куда смотрим
     local rightVector = cameraCFrame.RightVector -- Вправо от камеры
-    local upVector = cameraCFrame.UpVector       -- Вверх от камеры
     
     -- Рассчитываем направление движения
     local direction = Vector3.new(0, 0, 0)
     
-    -- W/S - вперед/назад по направлению взгляда
+    -- W - вперед по направлению взгляда
     if activeKeys.forward then 
         direction = direction + lookVector 
     end
+    
+    -- S - назад по направлению взгляда
     if activeKeys.backward then 
         direction = direction - lookVector 
     end
     
-    -- A/D - влево/вправо относительно камеры
+    -- A - влево относительно камеры
     if activeKeys.left then 
         direction = direction - rightVector 
     end
+    
+    -- D - вправо относительно камеры
     if activeKeys.right then 
         direction = direction + rightVector 
-    end
-    
-    -- Space/Shift - вверх/вниз относительно камеры
-    if activeKeys.up then 
-        direction = direction + upVector 
-    end
-    if activeKeys.down then 
-        direction = direction - upVector 
     end
     
     -- Нормализуем и применяем скорость
     if direction.Magnitude > 0 then
         direction = direction.Unit * speed
-    end
-    
-    -- ФИКС: Получаем текущую позицию персонажа
-    local currentPosition = rootPart.Position
-    
-    -- ФИКС: Применяем скорость с учетом возможной инерции
-    -- Если направление близко к нулю, сбрасываем скорость полностью
-    if direction.Magnitude < 0.1 then
-        bodyVelocity.Velocity = Vector3.new(0, 0, 0)
+        bodyVelocity.Velocity = direction
     else
-        -- ФИКС: Отдельно обрабатываем вертикальную компоненту
-        -- Если не нажаты вверх/вниз, устанавливаем вертикальную скорость в 0
-        if not activeKeys.up and not activeKeys.down then
-            -- Сохраняем горизонтальную скорость, но сбрасываем вертикальную
-            local horizontalVelocity = Vector3.new(direction.X, 0, direction.Z)
-            -- Проверяем, нужно ли вообще применять горизонтальную скорость
-            if horizontalVelocity.Magnitude > 0 then
-                bodyVelocity.Velocity = horizontalVelocity.Unit * speed
-            else
-                bodyVelocity.Velocity = Vector3.new(0, 0, 0)
-            end
-        else
-            -- Если нажаты вверх/вниз, применяем полную скорость
-            bodyVelocity.Velocity = direction
-        end
+        -- Если клавиши не нажаты - останавливаемся
+        bodyVelocity.Velocity = Vector3.new(0, 0, 0)
     end
     
-    -- Поворачиваем персонажа в сторону взгляда
-    bodyGyro.CFrame = CFrame.new(currentPosition, currentPosition + lookVector)
-end
-
--- Функция для принудительной остановки движения
-local function forceStopMovement()
-    if bodyVelocity then
-        -- ФИКС: Полностью сбрасываем скорость и пересоздаем BodyVelocity
-        bodyVelocity.Velocity = Vector3.new(0, 0, 0)
-        
-        -- Создаем новый BodyVelocity для гарантированного сброса инерции
-        local newBodyVelocity = Instance.new("BodyVelocity")
-        newBodyVelocity.Velocity = Vector3.new(0, 0, 0)
-        newBodyVelocity.MaxForce = Vector3.new(4000, 4000, 4000)
-        newBodyVelocity.P = 1250
-        
-        if bodyVelocity.Parent then
-            bodyVelocity:Destroy()
-            newBodyVelocity.Parent = rootPart
-            bodyVelocity = newBodyVelocity
-        end
-    end
+    -- Поворачиваем персонажа в сторону взгляда (опционально)
+    bodyGyro.CFrame = CFrame.new(rootPart.Position, rootPart.Position + lookVector)
 end
 
 -- Public method: Toggle fly on/off
@@ -272,27 +224,15 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- Update key states with forced stop fix
+-- Update key states every frame
 RunService.Heartbeat:Connect(function()
     if flying then
         local keys = {
             forward = UserInputService:IsKeyDown(Enum.KeyCode.W),
             backward = UserInputService:IsKeyDown(Enum.KeyCode.S),
             left = UserInputService:IsKeyDown(Enum.KeyCode.A),
-            right = UserInputService:IsKeyDown(Enum.KeyCode.D),
-            up = UserInputService:IsKeyDown(Enum.KeyCode.Space),
-            down = UserInputService:IsKeyDown(Enum.KeyCode.LeftShift)
+            right = UserInputService:IsKeyDown(Enum.KeyCode.D)
         }
-        
-        -- ФИКС: Проверяем, отпустили ли клавиши вверх/вниз
-        local wasVerticalPressed = activeKeys.up or activeKeys.down
-        local isVerticalPressed = keys.up or keys.down
-        
-        -- Если отпустили вертикальные клавиши, принудительно останавливаем движение
-        if wasVerticalPressed and not isVerticalPressed then
-            forceStopMovement()
-        end
-        
         FlyController.setKeys(keys)
     end
 end)

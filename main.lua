@@ -6,6 +6,9 @@ local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.
 -- Загружаем ваш ESP модуль
 local ESP = loadstring(game:HttpGet("https://raw.githubusercontent.com/LeonidZharenko/SecretProject/main/modules/ESP.lua"))()
 
+-- Загружаем модуль полета
+local FlyController = loadstring(game:HttpGet("https://raw.githubusercontent.com/LeonidZharenko/SecretProject/main/modules/fly.lua"))()
+
 -- Создаем окно
 local Window = Library:CreateWindow({
     Title = "MM2 ESP Hub",
@@ -23,6 +26,7 @@ local Tabs = {
     Main = Window:AddTab({ Title = "Главная", Icon = "home" }),
     ESP = Window:AddTab({ Title = "ESP", Icon = "eye" }),
     Visual = Window:AddTab({ Title = "Визуал", Icon = "palette" }),
+    Misc = Window:AddTab({ Title = "Misc", Icon = "settings" }),
     Settings = Window:AddTab({ Title = "Настройки", Icon = "settings" }),
 }
 
@@ -30,7 +34,7 @@ local Tabs = {
 local playerName = game.Players.LocalPlayer.Name 
 Tabs.Main:AddParagraph({
     Title = "Добро пожаловать, " .. playerName .. "!", 
-    Content = "Оптимизированный ESP для Murder Mystery 2\n\nФункции:\n• ESP игроков с Box, Tracer, Names\n• Определение ролей (Murderer/Sheriff)\n• GunDrop ESP (оптимизированный)\n• Настройка цветов\n• Сохранение настроек"
+    Content = "Оптимизированный ESP для Murder Mystery 2\n\nФункции:\n• ESP игроков с Box, Tracer, Names\n• Определение ролей (Murderer/Sheriff)\n• GunDrop ESP (оптимизированный)\n• Настройка цветов\n• Fly (полет)\n• Сохранение настроек"
 })
 
 Tabs.Main:AddParagraph({
@@ -200,6 +204,75 @@ Tabs.Visual:AddColorpicker("GunDropColor", {
     end
 })
 
+-- Вкладка Misc (Дополнительные функции)
+Tabs.Misc:AddToggle("FlyEnabled", {
+    Title = "Включить Fly",
+    Description = "Активировать режим полета",
+    Default = false,
+    Callback = function(value)
+        if value then
+            FlyController.toggle()
+        else
+            if FlyController.isFlying() then
+                FlyController.toggle()
+            end
+        end
+    end
+})
+
+-- Получаем минимальную и максимальную скорость для слайдера
+local minSpeed, maxSpeed = FlyController.getSpeedLimits()
+
+Tabs.Misc:AddSlider("FlySpeed", {
+    Title = "Скорость полета",
+    Description = "Регулировка скорости Fly",
+    Default = FlyController.getSpeed(),
+    Min = minSpeed,
+    Max = maxSpeed,
+    Rounding = 1,
+    Callback = function(value)
+        FlyController.setSpeed(value)
+    end
+})
+
+Tabs.Misc:AddButton({
+    Title = "Сбросить скорость",
+    Description = "Сбросить скорость к значению по умолчанию (50)",
+    Callback = function()
+        FlyController.setSpeed(50)
+        Library.Flags["FlySpeed"] = 50
+        Library:Notify({
+            Title = "Fly",
+            Content = "Скорость сброшена до 50",
+            Duration = 2
+        })
+    end
+})
+
+-- Keybind для включения/выключения Fly
+Tabs.Misc:AddKeybind("FlyToggleKey", {
+    Title = "Клавиша Fly",
+    Description = "Привязка клавиши для включения/выключения Fly",
+    Default = "F",
+    Callback = function(key)
+        FlyController.toggle()
+        local isFlying = FlyController.isFlying()
+        Library.Flags["FlyEnabled"] = isFlying
+        Library:Notify({
+            Title = "Fly",
+            Content = isFlying and "Fly включен" or "Fly выключен",
+            Duration = 2
+        })
+    end
+})
+
+Tabs.Misc:AddDivider()
+
+Tabs.Misc:AddParagraph({
+    Title = "Управление Fly",
+    Content = "Управление: WASD - движение\nПробел - вверх\nShift - вниз\n\nИспользуйте слайдер выше для регулировки скорости"
+})
+
 -- Вкладка Настройки
 SaveManager:SetLibrary(Library)
 InterfaceManager:SetLibrary(Library)
@@ -231,3 +304,62 @@ print("📌 Нажми INSERT для скрытия/показа интерфе�
 if ESP.init then
     ESP.init()
 end
+
+-- Обработка клавиш для управления полетом
+local UserInputService = game:GetService("UserInputService")
+
+-- Функция для обновления состояния клавиш управления полетом
+local function updateFlyKeys()
+    local keys = {
+        forward = UserInputService:IsKeyDown(Enum.KeyCode.W),
+        backward = UserInputService:IsKeyDown(Enum.KeyCode.S),
+        left = UserInputService:IsKeyDown(Enum.KeyCode.A),
+        right = UserInputService:IsKeyDown(Enum.KeyCode.D),
+        up = UserInputService:IsKeyDown(Enum.KeyCode.Space),
+        down = UserInputService:IsKeyDown(Enum.KeyCode.LeftShift)
+    }
+    FlyController.setKeys(keys)
+end
+
+-- Обновляем клавиши каждый кадр, когда полет активен
+game:GetService("RunService").RenderStepped:Connect(function()
+    if FlyController.isFlying() then
+        updateFlyKeys()
+    end
+end)
+
+-- Обработка клавиш для управления Fly через интерфейсные привязки
+local keybindConnection
+keybindConnection = UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    
+    -- Проверяем клавишу Fly из интерфейса
+    if input.KeyCode == Enum.KeyCode[Library.Flags.FlyToggleKey] then
+        FlyController.toggle()
+        local isFlying = FlyController.isFlying()
+        Library.Flags["FlyEnabled"] = isFlying
+        
+        -- Обновляем слайдер скорости при переключении
+        if isFlying then
+            Library.Flags["FlySpeed"] = FlyController.getSpeed()
+        end
+    end
+end)
+
+-- Автоматическое обновление интерфейса при изменении состояния Fly
+local function updateFlyUI()
+    Library.Flags["FlyEnabled"] = FlyController.isFlying()
+    Library.Flags["FlySpeed"] = FlyController.getSpeed()
+end
+
+-- Периодическое обновление UI (на случай, если состояние изменится извне)
+game:GetService("RunService").Heartbeat:Connect(function()
+    updateFlyUI()
+end)
+
+-- Уведомление о загрузке Fly
+Library:Notify({
+    Title = "Fly Module",
+    Content = "Модуль полета успешно загружен",
+    Duration = 3
+})

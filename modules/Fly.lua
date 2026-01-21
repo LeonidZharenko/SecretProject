@@ -1,25 +1,10 @@
---[[
-    Чистый Fly Script для Roblox с регулировкой скорости
-    Только логика полета, без привязок клавиш
-    Подходит для интеграции в UI-библиотеки
-    
-    Публичные методы:
-    FlyController.toggle() - включить/выключить полет
-    FlyController.setSpeed(number) - установить скорость
-    FlyController.getSpeed() - получить текущую скорость
-    FlyController.setKeys(table) - установить активные клавиши
-    
-    Использование:
-    1. Импортируйте этот скрипт
-    2. Вызывайте методы из вашей UI
-    3. Передавайте состояние клавиш через setKeys()
-]]
-
+-- modules/fly.lua - Классический Fly (куда смотришь - туда летишь)
 local FlyController = {}
 FlyController.__index = FlyController
 
 -- Services
 local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
 
 -- Fly variables
 local flying = false
@@ -54,8 +39,16 @@ end
 
 -- Function to create fly objects
 local function createFlyObjects()
-    if bodyVelocity then bodyVelocity:Destroy() end
-    if bodyGyro then bodyGyro:Destroy() end
+    if bodyVelocity then 
+        bodyVelocity:Destroy() 
+        bodyVelocity = nil
+    end
+    if bodyGyro then 
+        bodyGyro:Destroy() 
+        bodyGyro = nil
+    end
+    
+    ensureCharacter()
     
     bodyVelocity = Instance.new("BodyVelocity")
     bodyGyro = Instance.new("BodyGyro")
@@ -72,34 +65,55 @@ local function createFlyObjects()
     bodyGyro.Parent = rootPart
 end
 
--- Function to update fly movement
+-- Function to update fly movement (классический полет)
 local function updateFly()
     if not flying or not bodyVelocity or not bodyGyro then return end
     
-    -- Get camera direction
+    -- Получаем векторы направления камеры
     local camera = workspace.CurrentCamera
-    local lookVector = camera.CFrame.LookVector
-    local rightVector = camera.CFrame.RightVector
+    local cameraCFrame = camera.CFrame
     
-    -- Calculate movement direction
+    -- Основные векторы камеры
+    local lookVector = cameraCFrame.LookVector  -- Куда смотрим
+    local rightVector = cameraCFrame.RightVector -- Вправо от камеры
+    local upVector = cameraCFrame.UpVector       -- Вверх от камеры
+    
+    -- Рассчитываем направление движения
     local direction = Vector3.new(0, 0, 0)
     
-    if activeKeys.forward then direction = direction + lookVector end
-    if activeKeys.backward then direction = direction - lookVector end
-    if activeKeys.left then direction = direction - rightVector end
-    if activeKeys.right then direction = direction + rightVector end
-    if activeKeys.up then direction = direction + Vector3.new(0, 1, 0) end
-    if activeKeys.down then direction = direction + Vector3.new(0, -1, 0) end
+    -- W/S - вперед/назад по направлению взгляда
+    if activeKeys.forward then 
+        direction = direction + lookVector 
+    end
+    if activeKeys.backward then 
+        direction = direction - lookVector 
+    end
     
-    -- Normalize and apply speed
+    -- A/D - влево/вправо относительно камеры
+    if activeKeys.left then 
+        direction = direction - rightVector 
+    end
+    if activeKeys.right then 
+        direction = direction + rightVector 
+    end
+    
+    -- Space/Shift - вверх/вниз относительно камеры
+    if activeKeys.up then 
+        direction = direction + upVector 
+    end
+    if activeKeys.down then 
+        direction = direction - upVector 
+    end
+    
+    -- Нормализуем и применяем скорость
     if direction.Magnitude > 0 then
         direction = direction.Unit * speed
     end
     
-    -- Update velocity
+    -- Применяем скорость
     bodyVelocity.Velocity = direction
     
-    -- Update gyro to face camera direction
+    -- Поворачиваем персонажа в сторону взгляда (опционально)
     bodyGyro.CFrame = CFrame.new(rootPart.Position, rootPart.Position + lookVector)
 end
 
@@ -112,8 +126,14 @@ function FlyController.toggle()
         createFlyObjects()
         humanoid.PlatformStand = true
     else
-        if bodyVelocity then bodyVelocity:Destroy() end
-        if bodyGyro then bodyGyro:Destroy() end
+        if bodyVelocity then 
+            bodyVelocity:Destroy() 
+            bodyVelocity = nil
+        end
+        if bodyGyro then 
+            bodyGyro:Destroy() 
+            bodyGyro = nil
+        end
         humanoid.PlatformStand = false
     end
     
@@ -130,7 +150,7 @@ end
 -- Public method: Get current speed
 function FlyController.getSpeed()
     return speed
-}
+end
 
 -- Public method: Set active keys
 function FlyController.setKeys(keys)
@@ -163,7 +183,6 @@ end
 function FlyController.setSpeedLimits(min, max)
     if type(min) == "number" then minSpeed = math.max(1, min) end
     if type(max) == "number" then maxSpeed = math.max(minSpeed, max) end
-    -- Clamp current speed to new limits
     speed = math.clamp(speed, minSpeed, maxSpeed)
 end
 
@@ -171,8 +190,14 @@ end
 function FlyController.stop()
     if flying then
         flying = false
-        if bodyVelocity then bodyVelocity:Destroy() end
-        if bodyGyro then bodyGyro:Destroy() end
+        if bodyVelocity then 
+            bodyVelocity:Destroy() 
+            bodyVelocity = nil
+        end
+        if bodyGyro then 
+            bodyGyro:Destroy() 
+            bodyGyro = nil
+        end
         if humanoid then
             humanoid.PlatformStand = false
         end
@@ -187,7 +212,6 @@ game.Players.LocalPlayer.CharacterAdded:Connect(function(newCharacter)
     humanoid = character:WaitForChild("Humanoid")
     rootPart = character:WaitForChild("HumanoidRootPart")
     
-    -- Reset fly on respawn
     if flying then
         FlyController.stop()
         flying = false
@@ -199,14 +223,26 @@ task.spawn(function()
     ensureCharacter()
 end)
 
--- Update loop
+-- Update loop for fly movement
 RunService.RenderStepped:Connect(function()
     if flying then
         updateFly()
     end
 end)
 
--- Initialize controller
-FlyController.initialized = true
+-- Update key states every frame
+RunService.Heartbeat:Connect(function()
+    if flying then
+        local keys = {
+            forward = UserInputService:IsKeyDown(Enum.KeyCode.W),
+            backward = UserInputService:IsKeyDown(Enum.KeyCode.S),
+            left = UserInputService:IsKeyDown(Enum.KeyCode.A),
+            right = UserInputService:IsKeyDown(Enum.KeyCode.D),
+            up = UserInputService:IsKeyDown(Enum.KeyCode.Space),
+            down = UserInputService:IsKeyDown(Enum.KeyCode.LeftShift)
+        }
+        FlyController.setKeys(keys)
+    end
+end)
 
 return FlyController

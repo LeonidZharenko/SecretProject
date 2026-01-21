@@ -1,10 +1,25 @@
--- modules/fly.lua - Оптимизированный модуль Fly с фиксом вертикального полета
+--[[
+    Чистый Fly Script для Roblox с регулировкой скорости
+    Только логика полета, без привязок клавиш
+    Подходит для интеграции в UI-библиотеки
+    
+    Публичные методы:
+    FlyController.toggle() - включить/выключить полет
+    FlyController.setSpeed(number) - установить скорость
+    FlyController.getSpeed() - получить текущую скорость
+    FlyController.setKeys(table) - установить активные клавиши
+    
+    Использование:
+    1. Импортируйте этот скрипт
+    2. Вызывайте методы из вашей UI
+    3. Передавайте состояние клавиш через setKeys()
+]]
+
 local FlyController = {}
 FlyController.__index = FlyController
 
 -- Services
 local RunService = game:GetService("RunService")
-local UserInputService = game:GetService("UserInputService")
 
 -- Fly variables
 local flying = false
@@ -25,11 +40,6 @@ local activeKeys = {
 
 -- Character references
 local character, humanoid, rootPart
-local lastCameraCFrame = nil
-
--- Флаги для отслеживания вертикального движения
-local verticalMoveActive = false
-local verticalStopTimer = 0
 
 -- Internal function to get character parts
 local function ensureCharacter()
@@ -42,18 +52,10 @@ local function ensureCharacter()
     return character, humanoid, rootPart
 end
 
--- Optimized function to create fly objects
+-- Function to create fly objects
 local function createFlyObjects()
-    if bodyVelocity then 
-        bodyVelocity:Destroy() 
-        bodyVelocity = nil
-    end
-    if bodyGyro then 
-        bodyGyro:Destroy() 
-        bodyGyro = nil
-    end
-    
-    ensureCharacter()
+    if bodyVelocity then bodyVelocity:Destroy() end
+    if bodyGyro then bodyGyro:Destroy() end
     
     bodyVelocity = Instance.new("BodyVelocity")
     bodyGyro = Instance.new("BodyGyro")
@@ -68,20 +70,9 @@ local function createFlyObjects()
     
     bodyVelocity.Parent = rootPart
     bodyGyro.Parent = rootPart
-    
-    verticalMoveActive = false
-    verticalStopTimer = 0
 end
 
--- Функция для мгновенной остановки вертикального движения
-local function stopVerticalMovement()
-    if bodyVelocity then
-        local currentVelocity = bodyVelocity.Velocity
-        bodyVelocity.Velocity = Vector3.new(currentVelocity.X, 0, currentVelocity.Z)
-    end
-end
-
--- Optimized function to update fly movement
+-- Function to update fly movement
 local function updateFly()
     if not flying or not bodyVelocity or not bodyGyro then return end
     
@@ -90,67 +81,25 @@ local function updateFly()
     local lookVector = camera.CFrame.LookVector
     local rightVector = camera.CFrame.RightVector
     
-    -- Рассчитываем горизонтальное направление
-    local horizontalDirection = Vector3.new(0, 0, 0)
+    -- Calculate movement direction
+    local direction = Vector3.new(0, 0, 0)
     
-    if activeKeys.forward then 
-        horizontalDirection = horizontalDirection + lookVector 
-    elseif activeKeys.backward then 
-        horizontalDirection = horizontalDirection - lookVector 
+    if activeKeys.forward then direction = direction + lookVector end
+    if activeKeys.backward then direction = direction - lookVector end
+    if activeKeys.left then direction = direction - rightVector end
+    if activeKeys.right then direction = direction + rightVector end
+    if activeKeys.up then direction = direction + Vector3.new(0, 1, 0) end
+    if activeKeys.down then direction = direction + Vector3.new(0, -1, 0) end
+    
+    -- Normalize and apply speed
+    if direction.Magnitude > 0 then
+        direction = direction.Unit * speed
     end
     
-    if activeKeys.left then 
-        horizontalDirection = horizontalDirection - rightVector 
-    elseif activeKeys.right then 
-        horizontalDirection = horizontalDirection + rightVector 
-    end
+    -- Update velocity
+    bodyVelocity.Velocity = direction
     
-    -- Нормализуем горизонтальное направление
-    if horizontalDirection.Magnitude > 0 then
-        horizontalDirection = horizontalDirection.Unit * speed
-    end
-    
-    -- Обрабатываем вертикальное движение отдельно с более строгим контролем
-    local verticalSpeed = 0
-    local currentVerticalMoveActive = false
-    
-    if activeKeys.up then 
-        verticalSpeed = speed
-        currentVerticalMoveActive = true
-    elseif activeKeys.down then 
-        verticalSpeed = -speed
-        currentVerticalMoveActive = true
-    end
-    
-    -- Если вертикальное движение изменилось (началось или закончилось)
-    if verticalMoveActive ~= currentVerticalMoveActive then
-        verticalMoveActive = currentVerticalMoveActive
-        
-        -- Если вертикальное движение прекратилось, немедленно останавливаем вертикальную скорость
-        if not verticalMoveActive then
-            stopVerticalMovement()
-            verticalStopTimer = 3 -- 3 кадра для гарантированной остановки
-        end
-    end
-    
-    -- Если таймер активен, продолжаем гарантировать отсутствие вертикального движения
-    if verticalStopTimer > 0 then
-        stopVerticalMovement()
-        verticalStopTimer = verticalStopTimer - 1
-    end
-    
-    -- Создаем финальный вектор скорости
-    local finalVelocity = Vector3.new(horizontalDirection.X, verticalSpeed, horizontalDirection.Z)
-    
-    -- Если нет вертикального движения, убеждаемся что Y = 0
-    if not currentVerticalMoveActive then
-        finalVelocity = Vector3.new(finalVelocity.X, 0, finalVelocity.Z)
-    end
-    
-    -- Применяем скорость
-    bodyVelocity.Velocity = finalVelocity
-    
-    -- Обновляем гироскоп для направления камеры
+    -- Update gyro to face camera direction
     bodyGyro.CFrame = CFrame.new(rootPart.Position, rootPart.Position + lookVector)
 end
 
@@ -162,21 +111,10 @@ function FlyController.toggle()
     if flying then
         createFlyObjects()
         humanoid.PlatformStand = true
-        print("Fly: ON")
     else
-        if bodyVelocity then 
-            bodyVelocity:Destroy() 
-            bodyVelocity = nil
-        end
-        if bodyGyro then 
-            bodyGyro:Destroy() 
-            bodyGyro = nil
-        end
+        if bodyVelocity then bodyVelocity:Destroy() end
+        if bodyGyro then bodyGyro:Destroy() end
         humanoid.PlatformStand = false
-        lastCameraCFrame = nil
-        verticalMoveActive = false
-        verticalStopTimer = 0
-        print("Fly: OFF")
     end
     
     return flying
@@ -192,7 +130,7 @@ end
 -- Public method: Get current speed
 function FlyController.getSpeed()
     return speed
-end
+}
 
 -- Public method: Set active keys
 function FlyController.setKeys(keys)
@@ -225,6 +163,7 @@ end
 function FlyController.setSpeedLimits(min, max)
     if type(min) == "number" then minSpeed = math.max(1, min) end
     if type(max) == "number" then maxSpeed = math.max(minSpeed, max) end
+    -- Clamp current speed to new limits
     speed = math.clamp(speed, minSpeed, maxSpeed)
 end
 
@@ -232,20 +171,11 @@ end
 function FlyController.stop()
     if flying then
         flying = false
-        if bodyVelocity then 
-            bodyVelocity:Destroy() 
-            bodyVelocity = nil
-        end
-        if bodyGyro then 
-            bodyGyro:Destroy() 
-            bodyGyro = nil
-        end
+        if bodyVelocity then bodyVelocity:Destroy() end
+        if bodyGyro then bodyGyro:Destroy() end
         if humanoid then
             humanoid.PlatformStand = false
         end
-        lastCameraCFrame = nil
-        verticalMoveActive = false
-        verticalStopTimer = 0
         return true
     end
     return false
@@ -257,6 +187,7 @@ game.Players.LocalPlayer.CharacterAdded:Connect(function(newCharacter)
     humanoid = character:WaitForChild("Humanoid")
     rootPart = character:WaitForChild("HumanoidRootPart")
     
+    -- Reset fly on respawn
     if flying then
         FlyController.stop()
         flying = false
@@ -268,33 +199,14 @@ task.spawn(function()
     ensureCharacter()
 end)
 
--- Optimized update loop for fly movement
-RunService.RenderStepped:Connect(function(deltaTime)
+-- Update loop
+RunService.RenderStepped:Connect(function()
     if flying then
         updateFly()
     end
 end)
 
--- Optimized key updates
-local lastKeyUpdate = tick()
-local keyUpdateInterval = 0.01
-
-RunService.Heartbeat:Connect(function(deltaTime)
-    if flying then
-        local now = tick()
-        if now - lastKeyUpdate > keyUpdateInterval then
-            local keys = {
-                forward = UserInputService:IsKeyDown(Enum.KeyCode.W),
-                backward = UserInputService:IsKeyDown(Enum.KeyCode.S),
-                left = UserInputService:IsKeyDown(Enum.KeyCode.A),
-                right = UserInputService:IsKeyDown(Enum.KeyCode.D),
-                up = UserInputService:IsKeyDown(Enum.KeyCode.Space),
-                down = UserInputService:IsKeyDown(Enum.KeyCode.LeftShift)
-            }
-            FlyController.setKeys(keys)
-            lastKeyUpdate = now
-        end
-    end
-end)
+-- Initialize controller
+FlyController.initialized = true
 
 return FlyController

@@ -1,4 +1,4 @@
--- modules/fly.lua - Оптимизированный модуль Fly
+-- modules/fly.lua - Оптимизированный модуль Fly с фиксом вертикального полета
 local FlyController = {}
 FlyController.__index = FlyController
 
@@ -26,11 +26,10 @@ local activeKeys = {
 -- Character references
 local character, humanoid, rootPart
 local lastCameraCFrame = nil
-local lastVelocity = Vector3.new(0, 0, 0)
 
--- Добавим переменные для плавности
-local velocityDecay = 0.8 -- Коэффициент затухания скорости (0-1, чем меньше, тем быстрее остановка)
-local lastDirection = Vector3.new(0, 0, 0)
+-- Флаги для отслеживания вертикального движения
+local verticalMoveActive = false
+local verticalStopTimer = 0
 
 -- Internal function to get character parts
 local function ensureCharacter()
@@ -70,88 +69,89 @@ local function createFlyObjects()
     bodyVelocity.Parent = rootPart
     bodyGyro.Parent = rootPart
     
-    lastVelocity = Vector3.new(0, 0, 0)
-    lastDirection = Vector3.new(0, 0, 0)
+    verticalMoveActive = false
+    verticalStopTimer = 0
+end
+
+-- Функция для мгновенной остановки вертикального движения
+local function stopVerticalMovement()
+    if bodyVelocity then
+        local currentVelocity = bodyVelocity.Velocity
+        bodyVelocity.Velocity = Vector3.new(currentVelocity.X, 0, currentVelocity.Z)
+    end
 end
 
 -- Optimized function to update fly movement
 local function updateFly()
     if not flying or not bodyVelocity or not bodyGyro then return end
     
-    -- Get camera direction (cache if not changed much)
+    -- Get camera direction
     local camera = workspace.CurrentCamera
-    local cameraCFrame = camera.CFrame
-    local lookVector, rightVector, upVector
+    local lookVector = camera.CFrame.LookVector
+    local rightVector = camera.CFrame.RightVector
     
-    -- Only recalculate if camera moved significantly
-    if not lastCameraCFrame or (cameraCFrame.Position - lastCameraCFrame.Position).Magnitude > 0.1 then
-        lookVector = cameraCFrame.LookVector
-        rightVector = cameraCFrame.RightVector
-        upVector = cameraCFrame.UpVector
-        lastCameraCFrame = cameraCFrame
-    else
-        lookVector = lastCameraCFrame.LookVector
-        rightVector = lastCameraCFrame.RightVector
-        upVector = lastCameraCFrame.UpVector
-    end
-    
-    -- Calculate movement direction (optimized)
-    local direction = Vector3.new(0, 0, 0)
-    local anyKeyPressed = false
+    -- Рассчитываем горизонтальное направление
+    local horizontalDirection = Vector3.new(0, 0, 0)
     
     if activeKeys.forward then 
-        direction = direction + lookVector 
-        anyKeyPressed = true
+        horizontalDirection = horizontalDirection + lookVector 
     elseif activeKeys.backward then 
-        direction = direction - lookVector 
-        anyKeyPressed = true
+        horizontalDirection = horizontalDirection - lookVector 
     end
     
     if activeKeys.left then 
-        direction = direction - rightVector 
-        anyKeyPressed = true
+        horizontalDirection = horizontalDirection - rightVector 
     elseif activeKeys.right then 
-        direction = direction + rightVector 
-        anyKeyPressed = true
+        horizontalDirection = horizontalDirection + rightVector 
     end
+    
+    -- Нормализуем горизонтальное направление
+    if horizontalDirection.Magnitude > 0 then
+        horizontalDirection = horizontalDirection.Unit * speed
+    end
+    
+    -- Обрабатываем вертикальное движение отдельно с более строгим контролем
+    local verticalSpeed = 0
+    local currentVerticalMoveActive = false
     
     if activeKeys.up then 
-        direction = direction + upVector 
-        anyKeyPressed = true
+        verticalSpeed = speed
+        currentVerticalMoveActive = true
     elseif activeKeys.down then 
-        direction = direction - upVector 
-        anyKeyPressed = true
+        verticalSpeed = -speed
+        currentVerticalMoveActive = true
     end
     
-    -- Если нажата хотя бы одна клавиша, обновляем направление
-    if anyKeyPressed then
-        -- Only normalize and apply speed if we have movement
-        local magnitude = direction.Magnitude
-        if magnitude > 0.001 then
-            direction = direction / magnitude * speed
-            lastDirection = direction
-        end
-    else
-        -- Если никакие клавиши не нажаты, плавно уменьшаем скорость
-        direction = lastDirection * velocityDecay
+    -- Если вертикальное движение изменилось (началось или закончилось)
+    if verticalMoveActive ~= currentVerticalMoveActive then
+        verticalMoveActive = currentVerticalMoveActive
         
-        -- Если скорость стала очень маленькой, обнуляем
-        if direction.Magnitude < 0.5 then
-            direction = Vector3.new(0, 0, 0)
-            lastDirection = Vector3.new(0, 0, 0)
+        -- Если вертикальное движение прекратилось, немедленно останавливаем вертикальную скорость
+        if not verticalMoveActive then
+            stopVerticalMovement()
+            verticalStopTimer = 3 -- 3 кадра для гарантированной остановки
         end
     end
     
-    -- Update velocity only if changed (optimization)
-    if direction ~= lastVelocity then
-        bodyVelocity.Velocity = direction
-        lastVelocity = direction
+    -- Если таймер активен, продолжаем гарантировать отсутствие вертикального движения
+    if verticalStopTimer > 0 then
+        stopVerticalMovement()
+        verticalStopTimer = verticalStopTimer - 1
     end
     
-    -- Update gyro less frequently (only when camera changes significantly)
-    if not lastCameraCFrame or (cameraCFrame.Position - lastCameraCFrame.Position).Magnitude > 0.5 then
-        bodyGyro.CFrame = CFrame.new(rootPart.Position, rootPart.Position + lookVector)
+    -- Создаем финальный вектор скорости
+    local finalVelocity = Vector3.new(horizontalDirection.X, verticalSpeed, horizontalDirection.Z)
+    
+    -- Если нет вертикального движения, убеждаемся что Y = 0
+    if not currentVerticalMoveActive then
+        finalVelocity = Vector3.new(finalVelocity.X, 0, finalVelocity.Z)
     end
+    
+    -- Применяем скорость
+    bodyVelocity.Velocity = finalVelocity
+    
+    -- Обновляем гироскоп для направления камеры
+    bodyGyro.CFrame = CFrame.new(rootPart.Position, rootPart.Position + lookVector)
 end
 
 -- Public method: Toggle fly on/off
@@ -162,6 +162,7 @@ function FlyController.toggle()
     if flying then
         createFlyObjects()
         humanoid.PlatformStand = true
+        print("Fly: ON")
     else
         if bodyVelocity then 
             bodyVelocity:Destroy() 
@@ -173,8 +174,9 @@ function FlyController.toggle()
         end
         humanoid.PlatformStand = false
         lastCameraCFrame = nil
-        lastVelocity = Vector3.new(0, 0, 0)
-        lastDirection = Vector3.new(0, 0, 0)
+        verticalMoveActive = false
+        verticalStopTimer = 0
+        print("Fly: OFF")
     end
     
     return flying
@@ -226,13 +228,6 @@ function FlyController.setSpeedLimits(min, max)
     speed = math.clamp(speed, minSpeed, maxSpeed)
 end
 
--- Public method: Set velocity decay (for smoother stops)
-function FlyController.setVelocityDecay(decay)
-    if type(decay) == "number" then
-        velocityDecay = math.clamp(decay, 0.1, 0.95)
-    end
-end
-
 -- Public method: Stop fly immediately
 function FlyController.stop()
     if flying then
@@ -249,8 +244,8 @@ function FlyController.stop()
             humanoid.PlatformStand = false
         end
         lastCameraCFrame = nil
-        lastVelocity = Vector3.new(0, 0, 0)
-        lastDirection = Vector3.new(0, 0, 0)
+        verticalMoveActive = false
+        verticalStopTimer = 0
         return true
     end
     return false
@@ -282,7 +277,7 @@ end)
 
 -- Optimized key updates
 local lastKeyUpdate = tick()
-local keyUpdateInterval = 0.01 -- Более частая проверка клавиш для лучшей отзывчивости
+local keyUpdateInterval = 0.01
 
 RunService.Heartbeat:Connect(function(deltaTime)
     if flying then

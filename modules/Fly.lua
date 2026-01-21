@@ -28,6 +28,10 @@ local character, humanoid, rootPart
 local lastCameraCFrame = nil
 local lastVelocity = Vector3.new(0, 0, 0)
 
+-- Добавим переменные для плавности
+local velocityDecay = 0.8 -- Коэффициент затухания скорости (0-1, чем меньше, тем быстрее остановка)
+local lastDirection = Vector3.new(0, 0, 0)
+
 -- Internal function to get character parts
 local function ensureCharacter()
     if not character or not character.Parent then
@@ -67,6 +71,7 @@ local function createFlyObjects()
     bodyGyro.Parent = rootPart
     
     lastVelocity = Vector3.new(0, 0, 0)
+    lastDirection = Vector3.new(0, 0, 0)
 end
 
 -- Optimized function to update fly movement
@@ -76,45 +81,64 @@ local function updateFly()
     -- Get camera direction (cache if not changed much)
     local camera = workspace.CurrentCamera
     local cameraCFrame = camera.CFrame
-    local lookVector, rightVector
+    local lookVector, rightVector, upVector
     
     -- Only recalculate if camera moved significantly
     if not lastCameraCFrame or (cameraCFrame.Position - lastCameraCFrame.Position).Magnitude > 0.1 then
         lookVector = cameraCFrame.LookVector
         rightVector = cameraCFrame.RightVector
+        upVector = cameraCFrame.UpVector
         lastCameraCFrame = cameraCFrame
     else
         lookVector = lastCameraCFrame.LookVector
         rightVector = lastCameraCFrame.RightVector
+        upVector = lastCameraCFrame.UpVector
     end
     
     -- Calculate movement direction (optimized)
     local direction = Vector3.new(0, 0, 0)
+    local anyKeyPressed = false
     
     if activeKeys.forward then 
         direction = direction + lookVector 
+        anyKeyPressed = true
     elseif activeKeys.backward then 
         direction = direction - lookVector 
+        anyKeyPressed = true
     end
     
     if activeKeys.left then 
         direction = direction - rightVector 
+        anyKeyPressed = true
     elseif activeKeys.right then 
         direction = direction + rightVector 
+        anyKeyPressed = true
     end
     
     if activeKeys.up then 
-        direction = direction + Vector3.new(0, 1, 0) 
+        direction = direction + upVector 
+        anyKeyPressed = true
     elseif activeKeys.down then 
-        direction = direction + Vector3.new(0, -1, 0) 
+        direction = direction - upVector 
+        anyKeyPressed = true
     end
     
-    -- Only normalize and apply speed if we have movement
-    if direction.Magnitude > 0 then
-        -- Fast normalization for common cases
+    -- Если нажата хотя бы одна клавиша, обновляем направление
+    if anyKeyPressed then
+        -- Only normalize and apply speed if we have movement
         local magnitude = direction.Magnitude
         if magnitude > 0.001 then
             direction = direction / magnitude * speed
+            lastDirection = direction
+        end
+    else
+        -- Если никакие клавиши не нажаты, плавно уменьшаем скорость
+        direction = lastDirection * velocityDecay
+        
+        -- Если скорость стала очень маленькой, обнуляем
+        if direction.Magnitude < 0.5 then
+            direction = Vector3.new(0, 0, 0)
+            lastDirection = Vector3.new(0, 0, 0)
         end
     end
     
@@ -150,6 +174,7 @@ function FlyController.toggle()
         humanoid.PlatformStand = false
         lastCameraCFrame = nil
         lastVelocity = Vector3.new(0, 0, 0)
+        lastDirection = Vector3.new(0, 0, 0)
     end
     
     return flying
@@ -201,6 +226,13 @@ function FlyController.setSpeedLimits(min, max)
     speed = math.clamp(speed, minSpeed, maxSpeed)
 end
 
+-- Public method: Set velocity decay (for smoother stops)
+function FlyController.setVelocityDecay(decay)
+    if type(decay) == "number" then
+        velocityDecay = math.clamp(decay, 0.1, 0.95)
+    end
+end
+
 -- Public method: Stop fly immediately
 function FlyController.stop()
     if flying then
@@ -218,6 +250,7 @@ function FlyController.stop()
         end
         lastCameraCFrame = nil
         lastVelocity = Vector3.new(0, 0, 0)
+        lastDirection = Vector3.new(0, 0, 0)
         return true
     end
     return false
@@ -247,9 +280,9 @@ RunService.RenderStepped:Connect(function(deltaTime)
     end
 end)
 
--- Optimized key updates with debouncing
+-- Optimized key updates
 local lastKeyUpdate = tick()
-local keyUpdateInterval = 0.05 -- Update keys every 0.05 seconds instead of every frame
+local keyUpdateInterval = 0.01 -- Более частая проверка клавиш для лучшей отзывчивости
 
 RunService.Heartbeat:Connect(function(deltaTime)
     if flying then
